@@ -1,0 +1,16 @@
+The Farm
+34 E 63rd St
+www.thefarmwestmont.com
+(630)960-3965
+
+May 01, 2012 11:01
+Transaction #4
+
+4 Corn x $0.50 = $2.00
+4 7 Bag Corn x $3.00 = $12.00
+2 13 Bag Corn x $5.00 = $10.00
+
+Subtotal: 24.00
+Tax Edible (1.75%): $0.42
+Tax Non Edible (7.25%): $0.00
+Total: $24.42

@@ -1,0 +1,14 @@
+The Farm
+34 E 63rd St
+www.thefarmwestmont.com
+(630)960-3965
+
+May 01, 2012 11:00
+Transaction #2
+
+6 Corn x $0.50 = $3.00
+
+Subtotal: 3.00
+Tax Edible (1.75%): $0.05
+Tax Non Edible (7.25%): $0.00
+Total: $3.05

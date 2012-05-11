@@ -38,4 +38,3 @@ def generateSalesReport(cursor):
     for p in products:
         x.write(p[1] + "," + str(p[2]) + "\n")
     x.close()
-    subprocess.call("libreoffice /home/david/todo_nft_farm_stuff")

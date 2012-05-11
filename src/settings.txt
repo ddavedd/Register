@@ -1,7 +1,7 @@
 edible_tax_rate,.0175
 nonedible_tax_rate,.0725
-database_format,mysql
-database_path,/home/dave/workspace/Register/src/new_products.db
+database_format,sqlite
+database_path,/home/farmer1/test.db
 admin_button_height,4
 admin_button_width,15
 products_column_width,8

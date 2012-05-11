@@ -114,6 +114,9 @@ class Register:
     def simple_unlock(self):
         """Unlock everything"""
         self.enable_everything()
+        self.update_info_from_database()
+        self.update_category_frame()
+        self.update_products_frame()
         
     def unlock_window(self, window=None):
         """Unlock the window when you are done doing everything"""
@@ -662,6 +665,8 @@ class Register:
     def change_category(self, category_id):
         """Change the current category"""
         self.current_category_id = category_id
+        self.update_info_from_database()
+        self.update_category_frame()
         self.update_products_frame()
 
     def clear_cart(self):
@@ -1006,8 +1011,6 @@ class Register:
                 tax_edible += cart_item.price() * self.edible_tax_rate
         return tax_edible, tax_non_edible
 
-    
-
     def change_cart_amount(self, cart_row):
         """Change the amount of a product entry in a cart"""
         print 'Changing amount of item in cart'
@@ -1082,10 +1085,14 @@ class Register:
                 db_user = "root"
                 db_user_pw = "dave"
                 db_name = "products"
-                db_host = "localhost"
+                db_host = self.values_dict["database_path"]
                 self.products_db_connect = MySQLdb.connect(db_host, db_user, db_user_pw, db_name)
+            except MySQLdb.DatabaseError as e:
+                print "Failed to connect to mysql database, Database Error, check path"
+                print e
+                return
             except:
-                print "Failed to connect to mysql database, check path"
+                print "General Error"
                 return
         else:
             print "Unknown Database format, unable to connect"

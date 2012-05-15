@@ -810,30 +810,31 @@ class Register:
     def update_cart_totals(self):
         """Update the totals of all items in the cart"""
         clear_frame(self.totals_frame)
-        
+        totals_font = tkFont.Font(family="Arial", size=12)
+        totals_bold = tkFont.Font(family="Arial", size=12, weight=tkFont.BOLD)
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
-        subtotal_label = Tkinter.Label(self.totals_frame, text="Subtotal", anchor=Tkinter.W, width=15)
+        subtotal_label = Tkinter.Label(self.totals_frame, text="Subtotal", anchor=Tkinter.W, width=15, font=totals_font)
         subtotal_label.grid(row=0, column=0)
 
-        subtotal_value = Tkinter.Label(self.totals_frame, text="%.2f" % sub, anchor=Tkinter.W, width=15)
+        subtotal_value = Tkinter.Label(self.totals_frame, text="%.2f" % sub, anchor=Tkinter.E, width=15, font=totals_font)
         subtotal_value.grid(row=0, column=1)
         
-        ed_tax_label = Tkinter.Label(self.totals_frame, text="Edible Tax", anchor=Tkinter.W, width=15)
+        ed_tax_label = Tkinter.Label(self.totals_frame, text="Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
         ed_tax_label.grid(row=1, column=0)
         
-        ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % ed_tax, anchor=Tkinter.W, width=15)
+        ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
         ed_tax_value.grid(row=1, column=1)
         
-        non_ed_tax_label = Tkinter.Label(self.totals_frame, text="Non Edible Tax", anchor=Tkinter.W, width=15)
+        non_ed_tax_label = Tkinter.Label(self.totals_frame, text="Non Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
         non_ed_tax_label.grid(row=2, column=0)
         
-        non_ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % non_ed_tax, anchor=Tkinter.W, width=15)
+        non_ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % non_ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
         non_ed_tax_value.grid(row=2, column=1)
         
-        total_label = Tkinter.Label(self.totals_frame, text="Total", anchor=Tkinter.W, width=15)
+        total_label = Tkinter.Label(self.totals_frame, text="Total", anchor=Tkinter.W, width=15, font=totals_bold)
         total_label.grid(row=3, column=0)
         
-        total_value = Tkinter.Label(self.totals_frame, text="%.2f" % total, anchor=Tkinter.W, width=15)
+        total_value = Tkinter.Label(self.totals_frame, text="%.2f" % total, anchor=Tkinter.E, width=15, font=totals_bold)
         total_value.grid(row=3, column=1)
 
     def receipt_print(self):
@@ -860,7 +861,7 @@ class Register:
     
     def update_payment_frame(self):
         """Adds the payment frame buttons to the register window"""
-        self.payment_button_width = 10
+        self.payment_button_width = 8
         self.payment_button_height = 2
         cash_button = Tkinter.Button(self.payment_type_frame, text="Cash", command=self.cash_pay, width=self.payment_button_width, height=self.payment_button_height)
         cash_button.grid(row=0, column=0)
@@ -870,11 +871,21 @@ class Register:
     
         check_button = Tkinter.Button(self.payment_type_frame, text="Check", command=self.check_pay, width=self.payment_button_width, height=self.payment_button_height)
         check_button.grid(row=0, column=2)
+    
+        no_sale_button = Tkinter.Button(self.payment_type_frame, text="No Sale", command=self.no_sale, width=self.payment_button_width, height=self.payment_button_height)
+        no_sale_button.grid(row=0, column=3)
+        
+    def no_sale(self):
+        receipt.print_no_sale()
         
     def cash_pay(self):
         """Called when payed with cash"""
-        self.input_cash_amount_dialog()
-        
+        total, _, _, _ = self.get_total_price()
+        if total > 0.00:
+            self.input_cash_amount_dialog()
+        else:
+            tkMessageBox.showwarning("Total is zero", "Total is zero, did you mean No Sale?")
+            
     def input_cash_amount_dialog(self):
         """Get the amount of cash the customer pays with"""
         
@@ -937,21 +948,27 @@ class Register:
     def credit_pay(self):
         """Called when payment is credit card"""
         total, _, _, _ = self.get_total_price()
-        self.finish_transaction()
-        self.simple_lock()
-        tkMessageBox.showinfo("Credit Card Payment", "Total: $%.2f" % (total))
-        self.simple_unlock()
-        self.clear_cart()
-        
+        if total > 0.00:
+            self.finish_transaction()
+            self.simple_lock()
+            tkMessageBox.showinfo("Credit Card Payment", "Total: $%.2f" % (total))
+            self.simple_unlock()
+            self.clear_cart()
+        else:
+            tkMessageBox.showwarning("Total is zero", "Total is zero, did you mean No Sale?")
+            
     def check_pay(self):
         """Called when payment is check"""    
         total, _, _, _ = self.get_total_price()
-        self.finish_transaction()
-        self.simple_lock()
-        tkMessageBox.showinfo("Check Payment", "Total: $%.2f" % (total))
-        self.simple_unlock()
-        self.clear_cart()
-
+        if total > 0.00:
+            self.finish_transaction()
+            self.simple_lock()
+            tkMessageBox.showinfo("Check Payment", "Total: $%.2f" % (total))
+            self.simple_unlock()
+            self.clear_cart()
+        else:
+            tkMessageBox.showwarning("Total is zero", "Total is zero, did you mean No Sale?")
+            
     def finish_transaction(self):
         """Logs the transaction and prints receipt, clears cart for next transaction"""
         self.log_transaction()
@@ -1076,6 +1093,7 @@ class Register:
         self.deals = []
         self.deal_prices = []
         self.current_category_id = 1
+        self.start_time = time.time()
         if self.values_dict["database_format"].strip() == "sqlite":
             self.using_sqlite = True
             self.products_db_connect = sqlite3.connect(self.values_dict["database_path"])

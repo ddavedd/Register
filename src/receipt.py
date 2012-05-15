@@ -71,3 +71,13 @@ def print_receipt(cart, receipt_info, receipt_chars_per_inch):
     # send text to printer, in our case, send it to output
     characters_per_inch_option = "-o cpi=%i" % receipt_chars_per_inch
     subprocess.Popen(["lpr", characters_per_inch_option, receipt_file_name])
+
+
+def print_no_sale():
+    text="\n\n\n"
+    receipt_file_name = "receipts/blank.txt"
+    receipt_file = open(receipt_file_name, "w")
+    receipt_file.write(text)
+    receipt_file.close()
+    
+    subprocess.Popen(["lpr", receipt_file_name])

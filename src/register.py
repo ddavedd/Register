@@ -902,6 +902,13 @@ class Register:
             amount_button.config(width=self.values_dict["cash_button_width"], height=self.values_dict["cash_button_height"])
             amount_button.grid(row=0, column=amount_index)
             amount_index += 1
+        # Exact change button
+        exact_button = Tkinter.Button(change_window, text="Exact")
+        total, _, _, _ = self.get_total_price()
+        exact_button.config(command=partial(self.submit_cash_amount, False, total, change_window))
+        exact_button.config(width=self.values_dict["cash_button_width"], height=self.values_dict["cash_button_height"])
+        exact_button.grid(row=0, column=amount_index)
+        
         amount_label = Tkinter.Label(change_window, text="Enter Amount:")
         amount_label.grid(row=1, column=0)
         cash_var = Tkinter.StringVar()

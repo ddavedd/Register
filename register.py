@@ -7,7 +7,6 @@ import tkMessageBox
 import sqlite3
 from functools import partial
 import time
-import datetime
 import abscale
 import ScaleError
 import CartEntry
@@ -16,8 +15,6 @@ import timeformat
 import receipt
 import MySQLdb
 import TextHintEntry
-import NumberPadDialog
-import GenerateSalesReport
     
 CART_RIGHT = False       
     
@@ -48,9 +45,6 @@ def clear_frame(frame):
 
 
 class Register:
-    def generate_sales_report(self):
-        GenerateSalesReport.generateSalesReport(self.products_db_cursor)
-        
     """The basic component of our register, should be MVC'd if possible"""
     
     def add_category(self):
@@ -114,6 +108,9 @@ class Register:
     def simple_unlock(self):
         """Unlock everything"""
         self.enable_everything()
+        self.update_info_from_database()
+        self.update_category_frame()
+        self.update_products_frame()
         
     def unlock_window(self, window=None):
         """Unlock the window when you are done doing everything"""
@@ -584,7 +581,6 @@ class Register:
             ("Add Basic Item", self.add_basic_item_dialog),
             ("Add Deal", self.add_deal_dialog), 
             ("Adjust Deal", self.adjust_deal_amount_price_dialog),
-            ("Sales Report", self.generate_sales_report)
             #("Enable/Disable Deal", self.disable_deal_dialog),
             #("Enable/Disable Product", self.disable_product_dialog)
             ] 
@@ -662,6 +658,8 @@ class Register:
     def change_category(self, category_id):
         """Change the current category"""
         self.current_category_id = category_id
+        self.update_info_from_database()
+        self.update_category_frame()
         self.update_products_frame()
 
     def clear_cart(self):
@@ -737,7 +735,7 @@ class Register:
     def update_cart_items(self):
         """Update the items in the cart, taking into account deals"""
         clear_frame(self.cart_items_frame)
-        text_headers = ["Item Name", "Amount", "Price", "Delete"]
+        text_headers = ["Product", "Amount", "Price", "Delete"]
         for text_headers, text_index in zip(text_headers, range(len(text_headers))):
             header_label = Tkinter.Label(self.cart_items_frame)
             header_label.config(text=text_headers, width=12, justify=Tkinter.LEFT)
@@ -780,9 +778,10 @@ class Register:
 
     def add_cart_item_labels(self, frame, cart_item, cart_row):
         """Add labels to all items in the cart"""
+        bold_font = tkFont.Font(size=14, weight=tkFont.BOLD)
         self.cart_item_labels_width = 10
         name_label = Tkinter.Label(frame, anchor=Tkinter.W)
-        name_label.config(text=cart_item.get_description(), width=self.cart_item_labels_width)
+        name_label.config(text=cart_item.get_description(), width=self.cart_item_labels_width, font=bold_font)
         name_label.grid(row=cart_row + 1, column=0)
         
         amount_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
@@ -790,45 +789,46 @@ class Register:
             amount_button.config(text="%.2f" % cart_item.get_amount())
         else:
             amount_button.config(text="%i" % cart_item.get_amount())
-        amount_button.config(command=partial(self.change_cart_amount, cart_row))
+        amount_button.config(command=partial(self.change_cart_amount, cart_row), font=bold_font)
         amount_button.grid(row=cart_row + 1, column=1)
         
         price_label = Tkinter.Label(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
-        price_label.config(text="%.2f" % cart_item.price())
+        price_label.config(text="%.2f" % cart_item.price(), font=bold_font)
         price_label.grid(row=cart_row + 1, column=2)
         
         delete_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
-        delete_button.config(text="X")
+        delete_button.config(text="X", font=bold_font)
         delete_button.config(command=partial(self.delete_item, cart_row))
         delete_button.grid(row=cart_row + 1, column=3)
 
     def update_cart_totals(self):
         """Update the totals of all items in the cart"""
         clear_frame(self.totals_frame)
-        
+        totals_font = tkFont.Font(family="Arial", size=12)
+        totals_bold = tkFont.Font(family="Arial", size=12, weight=tkFont.BOLD)
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
-        subtotal_label = Tkinter.Label(self.totals_frame, text="Subtotal", anchor=Tkinter.W, width=15)
+        subtotal_label = Tkinter.Label(self.totals_frame, text="Subtotal", anchor=Tkinter.W, width=15, font=totals_font)
         subtotal_label.grid(row=0, column=0)
 
-        subtotal_value = Tkinter.Label(self.totals_frame, text="%.2f" % sub, anchor=Tkinter.W, width=15)
+        subtotal_value = Tkinter.Label(self.totals_frame, text="%.2f" % sub, anchor=Tkinter.E, width=15, font=totals_font)
         subtotal_value.grid(row=0, column=1)
         
-        ed_tax_label = Tkinter.Label(self.totals_frame, text="Edible Tax", anchor=Tkinter.W, width=15)
+        ed_tax_label = Tkinter.Label(self.totals_frame, text="Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
         ed_tax_label.grid(row=1, column=0)
         
-        ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % ed_tax, anchor=Tkinter.W, width=15)
+        ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
         ed_tax_value.grid(row=1, column=1)
         
-        non_ed_tax_label = Tkinter.Label(self.totals_frame, text="Non Edible Tax", anchor=Tkinter.W, width=15)
+        non_ed_tax_label = Tkinter.Label(self.totals_frame, text="Non Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
         non_ed_tax_label.grid(row=2, column=0)
         
-        non_ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % non_ed_tax, anchor=Tkinter.W, width=15)
+        non_ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % non_ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
         non_ed_tax_value.grid(row=2, column=1)
         
-        total_label = Tkinter.Label(self.totals_frame, text="Total", anchor=Tkinter.W, width=15)
+        total_label = Tkinter.Label(self.totals_frame, text="Total", anchor=Tkinter.W, width=15, font=totals_bold)
         total_label.grid(row=3, column=0)
         
-        total_value = Tkinter.Label(self.totals_frame, text="%.2f" % total, anchor=Tkinter.W, width=15)
+        total_value = Tkinter.Label(self.totals_frame, text="%.2f" % total, anchor=Tkinter.E, width=15, font=totals_bold)
         total_value.grid(row=3, column=1)
 
     def receipt_print(self):
@@ -855,37 +855,61 @@ class Register:
     
     def update_payment_frame(self):
         """Adds the payment frame buttons to the register window"""
-        self.payment_button_width = 10
+        self.payment_button_width = 8
         self.payment_button_height = 2
+        bold_font = tkFont.Font(weight=tkFont.BOLD)
         cash_button = Tkinter.Button(self.payment_type_frame, text="Cash", command=self.cash_pay, width=self.payment_button_width, height=self.payment_button_height)
+        cash_button.config(font=bold_font)
         cash_button.grid(row=0, column=0)
     
         credit_button = Tkinter.Button(self.payment_type_frame, text="Credit Card", command=self.credit_pay, width=self.payment_button_width, height=self.payment_button_height)
+        credit_button.config(font=bold_font)
         credit_button.grid(row=0, column=1)
     
         check_button = Tkinter.Button(self.payment_type_frame, text="Check", command=self.check_pay, width=self.payment_button_width, height=self.payment_button_height)
+        check_button.config(font=bold_font)
         check_button.grid(row=0, column=2)
+    
+        no_sale_button = Tkinter.Button(self.payment_type_frame, text="No Sale", command=self.no_sale, width=self.payment_button_width, height=self.payment_button_height)
+        no_sale_button.config(font=bold_font)
+        no_sale_button.grid(row=0, column=3)
+        
+    def no_sale(self):
+        receipt.print_no_sale()
         
     def cash_pay(self):
         """Called when payed with cash"""
-        self.input_cash_amount_dialog()
-        
+        total, _, _, _ = self.get_total_price()
+        if total > 0.00:
+            self.input_cash_amount_dialog()
+        else:
+            tkMessageBox.showwarning("Total is zero", "Total is zero, did you mean No Sale?")
+            
     def input_cash_amount_dialog(self):
         """Get the amount of cash the customer pays with"""
         
         change_window = Tkinter.Toplevel(self.master_frame)
-        # change_window.geometry("400x200+0+0")
         change_window.title("Cash Amount")
         
         self.lock_window(change_window)
         
         amount_index = 0
+        bold_font = tkFont.Font(family="Arial", size=12, weight=tkFont.BOLD)
         for amount in [50.00, 20.00, 15.00, 10.00, 5.00]:
             amount_button = Tkinter.Button(change_window, text="$%.2f" % amount)
             amount_button.config(command=partial(self.submit_cash_amount, False, amount, change_window))
             amount_button.config(width=self.values_dict["cash_button_width"], height=self.values_dict["cash_button_height"])
+            amount_button.config(font=bold_font)
             amount_button.grid(row=0, column=amount_index)
             amount_index += 1
+        # Exact change button
+        exact_button = Tkinter.Button(change_window, text="Exact")
+        total, _, _, _ = self.get_total_price()
+        exact_button.config(command=partial(self.submit_cash_amount, False, total, change_window))
+        exact_button.config(width=self.values_dict["cash_button_width"], height=self.values_dict["cash_button_height"])
+        exact_button.config(font=bold_font)
+        exact_button.grid(row=0, column=amount_index)
+        
         amount_label = Tkinter.Label(change_window, text="Enter Amount:")
         amount_label.grid(row=1, column=0)
         cash_var = Tkinter.StringVar()
@@ -897,8 +921,10 @@ class Register:
         amount_entry.grid(row=1, column=1, columnspan=2)
         amount_entry.focus_set()
         ok_button = Tkinter.Button(change_window, text="OK", command=partial(self.submit_cash_amount, True, cash_var, change_window))
+        ok_button.config(width=self.values_dict["cash_button_width"], font=bold_font)
         ok_button.grid(row=1, column=3)
         cancel_button = Tkinter.Button(change_window, text="Cancel", command=partial(self.unlock_window, change_window))
+        cancel_button.config(width=self.values_dict["cash_button_width"], font=bold_font)
         cancel_button.grid(row=1, column=4)
         
     def submit_cash_amount_enter(self, is_string_var, amount, window_to_close, _):
@@ -932,21 +958,27 @@ class Register:
     def credit_pay(self):
         """Called when payment is credit card"""
         total, _, _, _ = self.get_total_price()
-        self.finish_transaction()
-        self.simple_lock()
-        tkMessageBox.showinfo("Credit Card Payment", "Total: $%.2f" % (total))
-        self.simple_unlock()
-        self.clear_cart()
-        
+        if total > 0.00:
+            self.finish_transaction()
+            self.simple_lock()
+            tkMessageBox.showinfo("Credit Card Payment", "Total: $%.2f" % (total))
+            self.simple_unlock()
+            self.clear_cart()
+        else:
+            tkMessageBox.showwarning("Total is zero", "Total is zero, did you mean No Sale?")
+            
     def check_pay(self):
         """Called when payment is check"""    
         total, _, _, _ = self.get_total_price()
-        self.finish_transaction()
-        self.simple_lock()
-        tkMessageBox.showinfo("Check Payment", "Total: $%.2f" % (total))
-        self.simple_unlock()
-        self.clear_cart()
-
+        if total > 0.00:
+            self.finish_transaction()
+            self.simple_lock()
+            tkMessageBox.showinfo("Check Payment", "Total: $%.2f" % (total))
+            self.simple_unlock()
+            self.clear_cart()
+        else:
+            tkMessageBox.showwarning("Total is zero", "Total is zero, did you mean No Sale?")
+            
     def finish_transaction(self):
         """Logs the transaction and prints receipt, clears cart for next transaction"""
         self.log_transaction()
@@ -1005,8 +1037,6 @@ class Register:
             else:
                 tax_edible += cart_item.price() * self.edible_tax_rate
         return tax_edible, tax_non_edible
-
-    
 
     def change_cart_amount(self, cart_row):
         """Change the amount of a product entry in a cart"""
@@ -1073,6 +1103,7 @@ class Register:
         self.deals = []
         self.deal_prices = []
         self.current_category_id = 1
+        self.start_time = time.time()
         if self.values_dict["database_format"].strip() == "sqlite":
             self.using_sqlite = True
             self.products_db_connect = sqlite3.connect(self.values_dict["database_path"])
@@ -1082,10 +1113,14 @@ class Register:
                 db_user = "root"
                 db_user_pw = "dave"
                 db_name = "products"
-                db_host = "localhost"
+                db_host = self.values_dict["database_path"]
                 self.products_db_connect = MySQLdb.connect(db_host, db_user, db_user_pw, db_name)
+            except MySQLdb.DatabaseError as e:
+                print "Failed to connect to mysql database, Database Error, check path"
+                print e
+                return
             except:
-                print "Failed to connect to mysql database, check path"
+                print "General Error"
                 return
         else:
             print "Unknown Database format, unable to connect"

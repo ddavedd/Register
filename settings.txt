@@ -1,7 +1,7 @@
 edible_tax_rate,.0175
 nonedible_tax_rate,.0725
 database_format,mysql
-database_path,/home/dave/workspace/Register/src/new_products.db
+database_path,127.0.0.1
 admin_button_height,4
 admin_button_width,15
 products_column_width,8
@@ -33,5 +33,5 @@ totals_frame_color,orange
 payment_type_frame_color,white
 cash_button_width,5
 cash_button_height,5
-register_name,RegisterOne
+register_name,MasterTester
 product_font_size,12

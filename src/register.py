@@ -855,9 +855,8 @@ class Register:
     
     def update_payment_frame(self):
         """Adds the payment frame buttons to the register window"""
-        self.payment_button_width = 8
-        self.payment_button_height = 2
-        bold_font = tkFont.Font(weight=tkFont.BOLD)
+        
+        bold_font = tkFont.Font(weight=tkFont.BOLD, size=11)
         cash_button = Tkinter.Button(self.payment_type_frame, text="Cash", command=self.cash_pay, width=self.payment_button_width, height=self.payment_button_height)
         cash_button.config(font=bold_font)
         cash_button.grid(row=0, column=0)
@@ -1149,10 +1148,12 @@ class Register:
         cart_items_height = int(self.values_dict["cart_items_height"])
         totals_height = int(self.values_dict["totals_height"])
         payment_type_height = int(self.values_dict["payment_type_height"])
-    
         #Receipt info
         self.receipt_chars_per_inch = int(self.values_dict["receipt_chars_per_inch"])
         print self.receipt_chars_per_inch
+        
+        self.payment_button_width = int(self.values_dict["payment_button_width"])
+        self.payment_button_height = int(self.values_dict["payment_button_height"])
         
         self.products_frames = 0
         self.cart_frames = 0

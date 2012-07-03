@@ -1184,10 +1184,11 @@ class Register:
         self.debug_frame = self.add_products_frame(debug_height, self.values_dict["debug_frame_color"])
 
         # Cart frame additions
+        self.payment_type_frame = self.add_cart_frame(payment_type_height, self.values_dict["payment_type_frame_color"])
         self.cart_info_frame = self.add_cart_frame(cart_info_height, self.values_dict["cart_info_frame_color"])
         self.cart_items_frame = self.add_cart_frame(cart_items_height, self.values_dict["cart_items_frame_color"])
         self.totals_frame = self.add_cart_frame(totals_height, self.values_dict["totals_frame_color"])
-        self.payment_type_frame = self.add_cart_frame(payment_type_height, self.values_dict["payment_type_frame_color"])
+        
                 
         self.update_admin_frame()
         self.update_category_frame()

@@ -13,20 +13,12 @@ import CartEntry
 import tables
 import timeformat
 import receipt
-import MySQLdb
 import TextHintEntry
-    
+import ReadSettings
+import DatabaseConnect
+import MySQLdb
 CART_RIGHT = False       
     
-def get_values_from_init_file(init_file):
-    """Read the init file and parse program values into a dictionary"""
-    values_dict = {}
-    lines = init_file.readlines()
-    for line in lines:
-        line_splits = line.split(",")
-        if len(line_splits) == 2:
-            values_dict[line_splits[0].strip()] = line_splits[1].strip()
-    return values_dict
 
 
 def add_frame(master, f_width, f_height, background_color, row, column):
@@ -567,8 +559,11 @@ class Register:
                 self.deal_prices.append(tables.DealPrice(deal_price_row))
         
         except sqlite3.OperationalError as op_error:
-            print "Unable to read database, make sure path is correct. Error below:"
+            print "sqlite3: Unable to read database, make sure path is correct. Details below:"
             print op_error
+        except MySQLdb.OperationalError as mysql_op_error:
+            print "mysql: Unable to read database, make sure path is correct. Details below:"
+            print mysql_op_error
                         
     def update_admin_frame(self):
         """Updates the cashier, as well as adds admin buttons if admin logged in"""
@@ -985,37 +980,52 @@ class Register:
         
     def get_transaction_number(self):
         """Get the number of the next transaction"""
-        self.products_db_cursor.execute("SELECT max(transaction_id) FROM transaction_total")
-        max_trans_number = 0
-        for max_transaction_number_row in self.products_db_cursor:
-            max_trans_number = max_transaction_number_row[0]
-        if max_trans_number is None:
-            return 1
-        else:
-            return max_trans_number + 1
-        
+        try:
+            self.products_db_cursor.execute("SELECT max(transaction_id) FROM transaction_total")
+            max_trans_number = 0
+            for max_transaction_number_row in self.products_db_cursor:
+                max_trans_number = max_transaction_number_row[0]
+            if max_trans_number is None:
+                return 1
+            else:
+                return max_trans_number + 1
+        except:
+            print "Couldn't connect to database for transaction number"
+            return -1
+            
     def log_transaction(self):
         """Log the transaction into the database"""
+        # Returns -1 if no database connection
         trans_number = self.get_transaction_number()
+        # ----- #
+        trans_number = -1
         self.transaction_number = trans_number
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
         timestamp = timeformat.get_timestamp_string()
         cashier = self.cashierVar.get()
         time_to_finish = int(time.time() - self.start_time)
-        #print time_to_finish 
         insert_values = (trans_number, total, sub, ed_tax, non_ed_tax, timestamp, cashier, time_to_finish)
         print "Logging transaction"
-        print insert_values
-        sql_text = "INSERT INTO transaction_total VALUES (%i,%f,%f,%f,%f,'%s','%s',%i)" % insert_values
-        print sql_text
-        self.products_db_cursor.execute(sql_text)
+    
+        sql_statements = []
+        sql_statements.append("INSERT INTO transaction_total VALUES (%i,%f,%f,%f,%f,'%s','%s',%i);" % insert_values)
         for entry in self.cart:
             entry_insert_values = (trans_number, entry.is_product(), entry.get_transaction_item_id(), entry.get_amount())
-            sql_text = "INSERT INTO transaction_item VALUES (%i,%i,%i,%f)" % entry_insert_values
-            print sql_text
-            self.products_db_cursor.execute(sql_text)
-        self.products_db_connect.commit()
-
+            sql_statements.append("INSERT INTO transaction_item VALUES (%i,%i,%i,%f);" % entry_insert_values)
+        
+        if trans_number == -1:
+            print "Saving temporary to file"
+            transaction_file = open("UnsavedTrans/" + str(timestamp) + str(cashier) + ".sql", "w")
+            sql_text = reduce(lambda x,y: x+"\n"+y, sql_statements)
+            transaction_file.write(sql_text)
+            transaction_file.close()
+        else:
+            for sql_statement in sql_statements:
+                self.products_db_cursor.execute(sql_statement)
+            self.products_db_connect.commit()
+        
+            # save to file 
+            
     def get_subtotal_price(self):
         """Determine the price of all items in the cart"""
         return sum(cart_item.price() for cart_item in self.cart)
@@ -1086,7 +1096,7 @@ class Register:
         except IOError:
             print "Couldn't find initiation file for configuring register"
         
-        self.values_dict = get_values_from_init_file(init_file)
+        self.values_dict = ReadSettings.get_values_from_init_file(init_file)
         print self.values_dict
         
         self.scale = scale
@@ -1103,28 +1113,11 @@ class Register:
         self.deal_prices = []
         self.current_category_id = 1
         self.start_time = time.time()
-        if self.values_dict["database_format"].strip() == "sqlite":
-            self.using_sqlite = True
-            self.products_db_connect = sqlite3.connect(self.values_dict["database_path"])
-        elif self.values_dict["database_format"].strip() == "mysql":
-            self.using_sqlite = False
-            try:
-                db_user = "root"
-                db_user_pw = "dave"
-                db_name = "products"
-                db_host = self.values_dict["database_path"]
-                self.products_db_connect = MySQLdb.connect(db_host, db_user, db_user_pw, db_name)
-            except MySQLdb.DatabaseError as e:
-                print "Failed to connect to mysql database, Database Error, check path"
-                print e
-                return
-            except:
-                print "General Error"
-                return
-        else:
-            print "Unknown Database format, unable to connect"
-            return
-        self.products_db_cursor = self.products_db_connect.cursor() 
+        
+        cursor, conn = DatabaseConnect.connect(self.values_dict)
+        self.products_db_cursor = cursor
+        self.products_db_conn = conn
+         
         self.update_info_from_database()
         self.transaction_number = 0
         self.read_products_categories_constants()
@@ -1189,7 +1182,6 @@ class Register:
         self.cart_items_frame = self.add_cart_frame(cart_items_height, self.values_dict["cart_items_frame_color"])
         self.totals_frame = self.add_cart_frame(totals_height, self.values_dict["totals_frame_color"])
         
-                
         self.update_admin_frame()
         self.update_category_frame()
         self.update_products_frame()

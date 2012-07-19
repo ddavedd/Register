@@ -998,7 +998,7 @@ class Register:
         # Returns -1 if no database connection
         trans_number = self.get_transaction_number()
         # ----- #
-        trans_number = -1
+        #trans_number = -1
         self.transaction_number = trans_number
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
         timestamp = timeformat.get_timestamp_string()
@@ -1116,7 +1116,7 @@ class Register:
         
         cursor, conn = DatabaseConnect.connect(self.values_dict)
         self.products_db_cursor = cursor
-        self.products_db_conn = conn
+        self.products_db_connect = conn
          
         self.update_info_from_database()
         self.transaction_number = 0

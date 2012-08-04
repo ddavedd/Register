@@ -1,11 +1,11 @@
 edible_tax_rate,.0175
 nonedible_tax_rate,.0725
 database_format,mysql
-database_path,192.168.1.112
+database_path,192.168.1.104
 admin_button_height,4
 admin_button_width,15
 products_column_width,8
-categories_column_width,12
+categories_column_width,13
 application_height,800
 application_width,1600
 products_width,1200

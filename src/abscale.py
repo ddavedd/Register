@@ -32,7 +32,8 @@ class ABScale(object):
         self.ser.write(weight_code)
         bytes_read = self.ser.read(BYTES_TO_READ)
         if len(bytes_read) == 0:
-            raise ScaleError.ScaleError("Scale Timed Out")
+            print "Timed out"
+            return None
         else:
             print bytes_read
             clean_bytes = bytes_read.strip()

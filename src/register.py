@@ -642,7 +642,7 @@ class Register:
         clear_frame(self.category_frame)
         category_index = 0
         for category in self.categories:
-            cat_button = Tkinter.Button(self.category_frame, wraplength=80)
+            cat_button = Tkinter.Button(self.category_frame)
             cat_button.config(text=category.name, height=self.categories_button_height, width=self.categories_button_width)
             cat_button.config(command=partial(self.change_category, category.id))
             cat_row = category_index / self.categories_column_width
@@ -1188,22 +1188,11 @@ class Register:
         self.update_cart()
         self.update_payment_frame()            
 
-def getAddress():
-    import commands
-    text = commands.getoutput("ip addr")
-    for line in text.split("\n"):
-        clean_line = line.strip()
-        if "inet " in clean_line:
-            addr = clean_line.split(" ")[1]
-            if "127.0.0.1" not in addr:
-                return addr.split("/")[0]
-            
 def startRegister():
     """Start the register, connect to scale"""
     init_file_name = "settings.txt"
     root = Tkinter.Tk()
-    
-    root.title("Register - %s" % str(getAddress()))  # aDD IP address in title
+    root.title("Register")
     scale = abscale.ABScale("/dev/ttyUSB0")
     if scale.is_scale_connected():
         reg = Register(root, init_file_name, scale)

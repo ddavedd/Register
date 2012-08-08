@@ -13,20 +13,12 @@ import CartEntry
 import tables
 import timeformat
 import receipt
-import MySQLdb
 import TextHintEntry
-    
+import ReadSettings
+import DatabaseConnect
+import MySQLdb
 CART_RIGHT = False       
     
-def get_values_from_init_file(init_file):
-    """Read the init file and parse program values into a dictionary"""
-    values_dict = {}
-    lines = init_file.readlines()
-    for line in lines:
-        line_splits = line.split(",")
-        if len(line_splits) == 2:
-            values_dict[line_splits[0].strip()] = line_splits[1].strip()
-    return values_dict
 
 
 def add_frame(master, f_width, f_height, background_color, row, column):
@@ -525,17 +517,20 @@ class Register:
 
     def update_info_from_database(self):
         """Update the products, categories, items, and product_categories"""
-        # Empty all lists
-        self.items = []
-        self.products = []
-        self.categories = []
-        self.prod_cats = []
-        self.prod_prices = []
-        self.deals = []
-        self.deal_prices = []
         
         try:
             cursor = self.products_db_cursor
+            cursor.execute("SELECT * FROM items")
+            # Empty all lists after trying to execute a query, in case you need to
+            # continue without a connection to database
+            self.items = []
+            self.products = []
+            self.categories = []
+            self.prod_cats = []
+            self.prod_prices = []
+            self.deals = []
+            self.deal_prices = []
+        
             cursor.execute("SELECT * FROM items")
             for item_row in cursor:
                 self.items.append(tables.Item(item_row))
@@ -567,8 +562,11 @@ class Register:
                 self.deal_prices.append(tables.DealPrice(deal_price_row))
         
         except sqlite3.OperationalError as op_error:
-            print "Unable to read database, make sure path is correct. Error below:"
+            print "sqlite3: Unable to read database, make sure path is correct. Details below:"
             print op_error
+        except MySQLdb.OperationalError as mysql_op_error:
+            print "mysql: Unable to read database, make sure path is correct. Details below:"
+            print mysql_op_error
                         
     def update_admin_frame(self):
         """Updates the cashier, as well as adds admin buttons if admin logged in"""
@@ -647,7 +645,7 @@ class Register:
         clear_frame(self.category_frame)
         category_index = 0
         for category in self.categories:
-            cat_button = Tkinter.Button(self.category_frame)
+            cat_button = Tkinter.Button(self.category_frame, wraplength=80)
             cat_button.config(text=category.name, height=self.categories_button_height, width=self.categories_button_width)
             cat_button.config(command=partial(self.change_category, category.id))
             cat_row = category_index / self.categories_column_width
@@ -855,9 +853,8 @@ class Register:
     
     def update_payment_frame(self):
         """Adds the payment frame buttons to the register window"""
-        self.payment_button_width = 8
-        self.payment_button_height = 2
-        bold_font = tkFont.Font(weight=tkFont.BOLD)
+        
+        bold_font = tkFont.Font(weight=tkFont.BOLD, size=11)
         cash_button = Tkinter.Button(self.payment_type_frame, text="Cash", command=self.cash_pay, width=self.payment_button_width, height=self.payment_button_height)
         cash_button.config(font=bold_font)
         cash_button.grid(row=0, column=0)
@@ -986,37 +983,52 @@ class Register:
         
     def get_transaction_number(self):
         """Get the number of the next transaction"""
-        self.products_db_cursor.execute("SELECT max(transaction_id) FROM transaction_total")
-        max_trans_number = 0
-        for max_transaction_number_row in self.products_db_cursor:
-            max_trans_number = max_transaction_number_row[0]
-        if max_trans_number is None:
-            return 1
-        else:
-            return max_trans_number + 1
-        
+        try:
+            self.products_db_cursor.execute("SELECT max(transaction_id) FROM transaction_total")
+            max_trans_number = 0
+            for max_transaction_number_row in self.products_db_cursor:
+                max_trans_number = max_transaction_number_row[0]
+            if max_trans_number is None:
+                return 1
+            else:
+                return max_trans_number + 1
+        except:
+            print "Couldn't connect to database for transaction number"
+            return -1
+            
     def log_transaction(self):
         """Log the transaction into the database"""
+        # Returns -1 if no database connection
         trans_number = self.get_transaction_number()
+        # ----- #
+        #trans_number = -1
         self.transaction_number = trans_number
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
         timestamp = timeformat.get_timestamp_string()
         cashier = self.cashierVar.get()
         time_to_finish = int(time.time() - self.start_time)
-        #print time_to_finish 
         insert_values = (trans_number, total, sub, ed_tax, non_ed_tax, timestamp, cashier, time_to_finish)
         print "Logging transaction"
-        print insert_values
-        sql_text = "INSERT INTO transaction_total VALUES (%i,%f,%f,%f,%f,'%s','%s',%i)" % insert_values
-        print sql_text
-        self.products_db_cursor.execute(sql_text)
+    
+        sql_statements = []
+        sql_statements.append("INSERT INTO transaction_total VALUES (%i,%f,%f,%f,%f,'%s','%s',%i);" % insert_values)
         for entry in self.cart:
             entry_insert_values = (trans_number, entry.is_product(), entry.get_transaction_item_id(), entry.get_amount())
-            sql_text = "INSERT INTO transaction_item VALUES (%i,%i,%i,%f)" % entry_insert_values
-            print sql_text
-            self.products_db_cursor.execute(sql_text)
-        self.products_db_connect.commit()
-
+            sql_statements.append("INSERT INTO transaction_item VALUES (%i,%i,%i,%f);" % entry_insert_values)
+        
+        if trans_number == -1:
+            print "Saving temporary to file"
+            transaction_file = open("UnsavedTrans/" + str(timestamp) + str(cashier) + ".sql", "w")
+            sql_text = reduce(lambda x,y: x+"\n"+y, sql_statements)
+            transaction_file.write(sql_text)
+            transaction_file.close()
+        else:
+            for sql_statement in sql_statements:
+                self.products_db_cursor.execute(sql_statement)
+            self.products_db_connect.commit()
+        
+            # save to file 
+            
     def get_subtotal_price(self):
         """Determine the price of all items in the cart"""
         return sum(cart_item.price() for cart_item in self.cart)
@@ -1087,7 +1099,7 @@ class Register:
         except IOError:
             print "Couldn't find initiation file for configuring register"
         
-        self.values_dict = get_values_from_init_file(init_file)
+        self.values_dict = ReadSettings.get_values_from_init_file(init_file)
         print self.values_dict
         
         self.scale = scale
@@ -1104,28 +1116,11 @@ class Register:
         self.deal_prices = []
         self.current_category_id = 1
         self.start_time = time.time()
-        if self.values_dict["database_format"].strip() == "sqlite":
-            self.using_sqlite = True
-            self.products_db_connect = sqlite3.connect(self.values_dict["database_path"])
-        elif self.values_dict["database_format"].strip() == "mysql":
-            self.using_sqlite = False
-            try:
-                db_user = "root"
-                db_user_pw = "dave"
-                db_name = "products"
-                db_host = self.values_dict["database_path"]
-                self.products_db_connect = MySQLdb.connect(db_host, db_user, db_user_pw, db_name)
-            except MySQLdb.DatabaseError as e:
-                print "Failed to connect to mysql database, Database Error, check path"
-                print e
-                return
-            except:
-                print "General Error"
-                return
-        else:
-            print "Unknown Database format, unable to connect"
-            return
-        self.products_db_cursor = self.products_db_connect.cursor() 
+        
+        cursor, conn = DatabaseConnect.connect(self.values_dict)
+        self.products_db_cursor = cursor
+        self.products_db_connect = conn
+         
         self.update_info_from_database()
         self.transaction_number = 0
         self.read_products_categories_constants()
@@ -1149,10 +1144,12 @@ class Register:
         cart_items_height = int(self.values_dict["cart_items_height"])
         totals_height = int(self.values_dict["totals_height"])
         payment_type_height = int(self.values_dict["payment_type_height"])
-    
         #Receipt info
         self.receipt_chars_per_inch = int(self.values_dict["receipt_chars_per_inch"])
         print self.receipt_chars_per_inch
+        
+        self.payment_button_width = int(self.values_dict["payment_button_width"])
+        self.payment_button_height = int(self.values_dict["payment_button_height"])
         
         self.products_frames = 0
         self.cart_frames = 0
@@ -1183,22 +1180,33 @@ class Register:
         self.debug_frame = self.add_products_frame(debug_height, self.values_dict["debug_frame_color"])
 
         # Cart frame additions
+        self.payment_type_frame = self.add_cart_frame(payment_type_height, self.values_dict["payment_type_frame_color"])
         self.cart_info_frame = self.add_cart_frame(cart_info_height, self.values_dict["cart_info_frame_color"])
         self.cart_items_frame = self.add_cart_frame(cart_items_height, self.values_dict["cart_items_frame_color"])
         self.totals_frame = self.add_cart_frame(totals_height, self.values_dict["totals_frame_color"])
-        self.payment_type_frame = self.add_cart_frame(payment_type_height, self.values_dict["payment_type_frame_color"])
-                
+        
         self.update_admin_frame()
         self.update_category_frame()
         self.update_products_frame()
         self.update_cart()
         self.update_payment_frame()            
 
+def getAddress():
+    import commands
+    text = commands.getoutput("ip addr")
+    for line in text.split("\n"):
+        clean_line = line.strip()
+        if "inet " in clean_line:
+            addr = clean_line.split(" ")[1]
+            if "127.0.0.1" not in addr:
+                return addr.split("/")[0]
+            
 def startRegister():
     """Start the register, connect to scale"""
     init_file_name = "settings.txt"
     root = Tkinter.Tk()
-    root.title("Register")
+    
+    root.title("Register - %s" % str(getAddress()))  # aDD IP address in title
     scale = abscale.ABScale("/dev/ttyUSB0")
     if scale.is_scale_connected():
         reg = Register(root, init_file_name, scale)

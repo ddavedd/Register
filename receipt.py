@@ -74,7 +74,8 @@ def print_receipt(cart, receipt_info, receipt_chars_per_inch):
 
 
 def print_no_sale():
-    text="\n\n\n"
+    """Send a blank print job to printer so drawer opens"""
+    text = "\n\n\n"
     receipt_file_name = "receipts/blank.txt"
     receipt_file = open(receipt_file_name, "w")
     receipt_file.write(text)

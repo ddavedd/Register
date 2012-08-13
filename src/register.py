@@ -517,18 +517,17 @@ class Register:
 
     def update_info_from_database(self):
         """Update the products, categories, items, and product_categories"""
-        # Empty all lists
-        self.items = []
-        self.products = []
-        self.categories = []
-        self.prod_cats = []
-        self.prod_prices = []
-        self.deals = []
-        self.deal_prices = []
-        
         try:
             cursor = self.products_db_cursor
             cursor.execute("SELECT * FROM items")
+            # Empty all lists if we get a valid connection
+            self.items = []
+            self.products = []
+            self.categories = []
+            self.prod_cats = []
+            self.prod_prices = []
+            self.deals = []
+            self.deal_prices = []
             for item_row in cursor:
                 self.items.append(tables.Item(item_row))
                     
@@ -642,7 +641,7 @@ class Register:
         clear_frame(self.category_frame)
         category_index = 0
         for category in self.categories:
-            cat_button = Tkinter.Button(self.category_frame)
+            cat_button = Tkinter.Button(self.category_frame, wraplength=80)
             cat_button.config(text=category.name, height=self.categories_button_height, width=self.categories_button_width)
             cat_button.config(command=partial(self.change_category, category.id))
             cat_row = category_index / self.categories_column_width

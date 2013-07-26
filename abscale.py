@@ -18,6 +18,7 @@ class ABScale(object):
             print "Scale not connected at %s" % device_address
             print "Please restart program with scale connected"    
             self.ser = None
+            
     
     def is_scale_connected(self):
         """Check to see if a scale is connected"""

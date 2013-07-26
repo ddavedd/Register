@@ -11,14 +11,14 @@ import abscale
 import ScaleError
 import CartEntry
 import tables
-import timeformat
 import receipt
-import TextHintEntry
 import ReadSettings
 import DatabaseConnect
 import MySQLdb
+import datetime
 CART_RIGHT = False       
-    
+TRANSACTION_TOTAL_TABLE = "reg_transactiontotal"
+TRANSACTION_ITEM_TABLE = "reg_transactionitem"
 
 
 def add_frame(master, f_width, f_height, background_color, row, column):
@@ -39,35 +39,7 @@ def clear_frame(frame):
 class Register:
     """The basic component of our register, should be MVC'd if possible"""
     
-    def add_category(self):
-        """Add a category for labeling products"""
-        cat_name = tkSimpleDialog.askstring("New Category", "Category Name:")        
-        if cat_name is None:
-            print "Canceled category addition"
-        elif cat_name.strip() == "":
-            print "Empty string category not allowed"
-        else:
-            category_values = cat_name
-            sql_text = "INSERT INTO categories VALUES (NULL, '%s')" % category_values
-            print sql_text
-            self.products_db_cursor.execute(sql_text)
-            self.products_db_connect.commit()
-            self.update_info_from_database()
-            self.update_category_frame()
 
-    def add_basic_item_dialog(self):
-        """Add a basic item that can be tracked into to the database"""
-        item_name = tkSimpleDialog.askstring("Add a basic item", "Item Name: ")
-        if item_name is None:
-            print "Canceled adding item"
-        elif item_name.strip() == "":
-            print "Can't add an empty string item"
-        else:
-            clean_item_name = item_name.strip()
-            sql_text = "INSERT INTO items VALUES (NULL, '%s')" % clean_item_name
-            self.products_db_cursor.execute(sql_text)
-            self.products_db_connect.commit()
-            self.update_info_from_database()
 
     def disable_everything(self):
         """Disable everything so that you have to finish what you are currently doing"""
@@ -111,64 +83,6 @@ class Register:
         if window is not None:
             window.destroy()
 
-    def add_deal_dialog(self, window_to_close=None):
-        """Add a deal window"""
-        if window_to_close is not None:
-            window_to_close.destroy()
-            
-        add_deal_window = Tkinter.Toplevel(self.master)
-        add_deal_window.title("Add a deal")
-        
-        self.lock_window(add_deal_window)
-        
-        product_names = ["%i %s" % (p.id, p.name) for p in self.products]
-        
-        product_label = Tkinter.Label(add_deal_window, text="Product:")
-        product_label.grid(row=0, column=0)
-        
-        product_var = Tkinter.StringVar()
-        product_option = Tkinter.OptionMenu(add_deal_window, product_var, None, [])
-        product_option.grid(row=0, column=1)
-        
-        product_name_search_entry = TextHintEntry.TextHintEntry(add_deal_window)
-        product_name_search_entry.set_option_box_hint_list(product_option, product_var, product_names)
-        product_name_search_entry.grid(row=1, column=0)
-        
-        product_amount_label = Tkinter.Label(add_deal_window, text="Amount of products:")
-        product_amount_label.grid(row=2, column=0)
-        
-        product_amount_entry = Tkinter.Entry(add_deal_window)
-        product_amount_entry.grid(row=2, column=1)
-        
-        deal_price_label = Tkinter.Label(add_deal_window, text="Deal Price:")
-        deal_price_label.grid(row=3, column=0)
-        
-        deal_price_entry = Tkinter.Entry(add_deal_window)
-        deal_price_entry.grid(row=3, column=1)
-        
-        submit_button = Tkinter.Button(add_deal_window, text="Add Deal")
-        submit_button.config(command=partial(self.add_deal, product_var, product_amount_entry, deal_price_entry, add_deal_window))
-        submit_button.grid(row=4, column=0)
-
-    def add_deal(self, product_var, amount_entry, price_entry, window_to_close):
-        """Add a deal to the database"""
-        #@todo catch problems in input on all dialogs
-        
-        product_id = int(product_var.get().split(" ")[0])
-        amount = int(amount_entry.get())
-        price = float(price_entry.get())
-        
-        self.unlock_window(window_to_close)
-        
-        deal_insert_values = (product_id, amount, 1)
-        self.products_db_cursor.execute("INSERT INTO deal VALUES (NULL,%i,%i,%i)" % deal_insert_values)
-        insert_id = self.products_db_cursor.lastrowid
-        timestamp = timeformat.get_timestamp_string()
-        deal_price_insert_values = (insert_id, price, timestamp)
-        self.products_db_cursor.execute("INSERT INTO deal_price VALUES (%i,%f,'%s')" % deal_price_insert_values)
-        self.products_db_connect.commit()
-    
-        self.update_info_from_database()
 
     def get_current_deal_price(self, deal_id):
         """Get the price of the newest deal"""
@@ -183,346 +97,26 @@ class Register:
             deal_price_dict[deal.id] = self.get_current_deal_price(deal.id) 
         return deal_price_dict
 
-    def disable_product_dialog(self):
-        """Disable a product with this window"""
-        disable_product_window = Tkinter.Toplevel(self.master)
-        disable_product_window.title("Disable Product")
-        
-        product_strings = []
-        for product in self.products:
-            product_string = "%i %s" % (product.id, product.name)
-            for product_price in self.prod_prices:
-                if product_price.id == product.id:
-                    product_string += " $%.2f" % product_price.price
-            product_strings.append(product_string)
-           
-        product_var = Tkinter.StringVar()
-        product_label = Tkinter.Label(disable_product_window, text="Product to disable:")
-        product_label.grid(row=0, column=0)   
-        product_option = Tkinter.OptionMenu(disable_product_window, product_var, None, *product_strings)    
-        product_option.grid(row=0, column=1)
-        check_variable = Tkinter.IntVar()
-        check = Tkinter.Checkbutton(disable_product_window, text="Disable", variable=check_variable)
-        check.grid(row=0, column=2)
-        submit_changes_button = Tkinter.Button(disable_product_window, text="Submit Changes")
-        submit_changes_button.config(command=partial(self.disable_product, product_var, disable_product_window, check_variable)) 
-        submit_changes_button.grid(row=1, column=0)
-
-    def disable_product(self, product_var, window_to_close, change_to_var):
-        """Disable a product"""
-        if change_to_var.get() == 1:
-            change = 0
-            print "enabled=FALSE"
-        else:
-            change = 1
-            print "enabled=TRUE"
-        product_string = product_var.get()
-        window_to_close.destroy()
-        product_id = int(product_string.split(" ")[0])
-        print "Disabling deal with id %i" % product_id
-        self.products_db_cursor.execute("UPDATE deal SET enabled=%i WHERE deal_id=%i" % (change, product_id))
-        self.products_db_connect.commit()
-        self.update_info_from_database()
-        self.update_products_frame()
-            
-    def disable_deal_dialog(self):
-        """Disable a deal with this window"""
-        disable_deal_window = Tkinter.Toplevel(self.master)
-        disable_deal_window.title("Disable Deal")
-        products_dict = {}
-        for product in self.products:
-            products_dict[product.id] = product.name
-        deal_price_dict = self.get_deal_price_dict()
-        deal_strings = ["%i %s %i / $%.2f" % 
-            (deal.id, products_dict[deal.product_id], deal.product_count, deal_price_dict[deal.id]) for deal in self.deals]
-        deal_var = Tkinter.StringVar()
-        product_label = Tkinter.Label(disable_deal_window, text="Deal to disable:")
-        product_label.grid(row=0, column=0)
-        
-        product_option = Tkinter.OptionMenu(disable_deal_window, deal_var, None, *deal_strings)
-        product_option.grid(row=0, column=1)
-        
-        check_variable = Tkinter.IntVar()
-        check = Tkinter.Checkbutton(disable_deal_window, text="Disable", variable=check_variable)
-        check.grid(row=0, column=2)
-        
-        submit_changes_button = Tkinter.Button(disable_deal_window, text="Submit Changes")
-        submit_changes_button.config(command=partial(self.disable_deal, deal_var, disable_deal_window, check_variable))
-        submit_changes_button.grid(row=1, column=0)
-
-    def disable_deal(self, deal_var, window_to_close, change_to_var):
-        """Disable a deal"""
-        if change_to_var.get() == 1:
-            change = 0
-            print "enabled=FALSE"
-        else:
-            change = 1
-            print "enabled=TRUE"
-        deal_string = deal_var.get()
-        window_to_close.destroy()
-        deal_id = int(deal_string.split(" ")[0])
-        print "Disabling deal with id %i" % deal_id
-        self.products_db_cursor.execute("UPDATE deal SET enabled=%i WHERE deal_id=%i" % (change, deal_id))
-        self.products_db_connect.commit()
-        self.update_info_from_database()
-        self.update_products_frame()
-        
-    def adjust_deal_amount_price_dialog(self):
-        """Adjust the price and amount of a deal"""
-        adjust_deal_window = Tkinter.Toplevel(self.master)
-        adjust_deal_window.title("Adjust Deal")
-        
-        self.lock_window(adjust_deal_window)
-        
-        products_dict = {}
-        for product in self.products:
-            products_dict[product.id] = product.name
-        deal_price_dict = self.get_deal_price_dict()
-            
-        deal_strings = ["%i %s %i / $%.2f" % (d.id, products_dict[d.product_id], d.product_count, deal_price_dict[d.id]) for d in self.deals]
-        deal_var = Tkinter.StringVar()
-        
-        product_label = Tkinter.Label(adjust_deal_window, text="Deal:")
-        product_label.grid(row=0, column=0)
-        
-        product_option = Tkinter.OptionMenu(adjust_deal_window, deal_var, None, *deal_strings)
-        product_option.grid(row=0, column=1)
-        
-        amount_label = Tkinter.Label(adjust_deal_window, text="Amount:")
-        amount_label.grid(row=1, column=0)
-        amount_entry = Tkinter.Entry(adjust_deal_window)
-        amount_entry.grid(row=1, column=1)
-        
-        price_label = Tkinter.Label(adjust_deal_window, text="Price:")
-        price_label.grid(row=2, column=0)
-        price_entry = Tkinter.Entry(adjust_deal_window)
-        price_entry.grid(row=2, column=1)
-        
-        submit_changes_button = Tkinter.Button(adjust_deal_window, text="Submit Changes")
-        submit_changes_button.config(command=partial(self.adjust_deal, deal_var, amount_entry, price_entry, adjust_deal_window))
-        submit_changes_button.grid(row=3, column=0)
-
-    def adjust_deal(self, deal_var, amount_entry, price_entry, window_to_close):
-        """Adjust an existing deal"""
-        
-        deal_string = deal_var.get()
-        amount = amount_entry.get()
-        price = price_entry.get()
-        
-        self.unlock_window(window_to_close)
-        
-        deal_id = int(deal_string.split(" ")[0])
-        price = float(price)
-        amount = int(amount)
-        timestamp = timeformat.get_timestamp_string()
-        self.products_db_cursor.execute("UPDATE deal SET product_count=%i WHERE deal_id=%i" % (amount, deal_id))
-        self.products_db_cursor.execute("INSERT INTO deal_price VALUES (%i,%f,'%s')" % (deal_id, price, timestamp))
-        self.products_db_connect.commit()
-        self.update_info_from_database()
-
-    def add_product_to_database_dialog(self):
-        """Create a dialog for adding a product"""
-        add_product_window = Tkinter.Toplevel(self.master)
-        add_product_window.title("Add Product")
-        
-        self.lock_window(add_product_window)
-        
-        item_type_label = Tkinter.Label(add_product_window, text="Item:")
-        item_type_label.grid(row=0, column=0)
-        
-        item_type_var = Tkinter.StringVar()
-        item_names = [str(x.id) + " " + x.name for x in self.items]
-
-        item_type_option = Tkinter.OptionMenu(add_product_window, item_type_var, item_type_var.get(), None)
-        item_type_option.grid(row=0, column=1)
-        
-        hint_entry = TextHintEntry.TextHintEntry(add_product_window)
-        hint_entry.set_option_box_hint_list(item_type_option, item_type_var, item_names)
-        hint_entry.grid(row=0, column=2)
-        
-        item_amount_label = Tkinter.Label(add_product_window, text="Number of items")
-        item_amount_label.grid(row=1, column=0)
-        
-        item_amount_entry = Tkinter.Entry(add_product_window)
-        item_amount_entry.grid(row=1, column=1)
-        
-        name_label = Tkinter.Label(add_product_window, text="Product Name:")    
-        name_label.grid(row=2, column=0)
-        name_entry = Tkinter.Entry(add_product_window)
-        name_entry.grid(row=2, column=1)
-        
-        price_label = Tkinter.Label(add_product_window, text="Price")
-        price_label.grid(row=3, column=0)
-        price_entry = Tkinter.Entry(add_product_window)
-        price_entry.grid(row=3, column=1)
-        
-        by_weight_var = Tkinter.IntVar()
-        by_weight_button = Tkinter.Checkbutton(add_product_window, text="By Weight", \
-                                            variable=by_weight_var)
-        by_weight_button.grid(row=4, column=0)
-        
-        var_tax_rate = Tkinter.IntVar() 
-        tax_rate_option = Tkinter.Checkbutton(add_product_window, text="Non-Edible Tax Rate", variable=var_tax_rate)
-        tax_rate_option.grid(row=4, column=1)
-        
-        is_premarked_var = Tkinter.IntVar()
-        is_premarked_button = Tkinter.Checkbutton(add_product_window, text="Is Premarked", variable=is_premarked_var)
-        is_premarked_button.grid(row=4, column=2)
-        
-        add_button = Tkinter.Button(add_product_window, text="Add", command=partial(self.add_product_to_database, name_entry, \
-                                                                        price_entry, by_weight_var, item_type_var, \
-                                                                        item_amount_entry, var_tax_rate, is_premarked_var, add_product_window))
-        add_button.grid(row=5, column=0)
-        
-    def adjust_price_dialog(self):
-        """A dialog for adjusting the price of a product"""
-            
-        adjust_price_window = Tkinter.Toplevel(self.master)
-        adjust_price_window.title("Adjust Price")
-        
-        price_dict = {}
-        for product in self.products:
-            price = self.get_product_price(product.id)
-            price_dict[product.id] = price
-        
-        product_names_prices = ["%i %s %.2f %s" % (product.id, product.name,
-               price_dict[product.id], product.get_item_ending()) for product in self.products]
-
-        product_to_change_label = Tkinter.Label(adjust_price_window, text="Price to change:")
-        product_to_change_label.grid(row=0, column=0)
-        
-        product_var = Tkinter.StringVar()
-        product_option = Tkinter.OptionMenu(adjust_price_window, product_var, None, None)
-        product_option.grid(row=0, column=1)
-
-        hint_entry = TextHintEntry.TextHintEntry(adjust_price_window)
-        hint_entry.set_option_box_hint_list(product_option, product_var, product_names_prices)
-        hint_entry.grid(row=0, column=2)
-        
-        new_price_label = Tkinter.Label(adjust_price_window, text="Adjusted Price")
-        new_price_label.grid(row=2, column=0)
-        
-        new_price_entry = Tkinter.Entry(adjust_price_window)
-        new_price_entry.grid(row=2, column=1)
-        
-        new_price_commit = Tkinter.Button(adjust_price_window, text="Submit Change", 
-            command=partial(self.change_product_price, product_var, new_price_entry, adjust_price_window))
-        new_price_commit.grid(row=3, column=0)
-
-    def change_product_price(self, product_var, new_price_entry, window_to_close):
-        """Change the product price in the database"""
-
-        
-        product_id = int(product_var.get().split(" ")[0])
-        price = float(new_price_entry.get().strip())
-        timestamp = timeformat.get_timestamp_string()
-        window_to_close.destroy()
-        price_insert_values = (product_id, price, timestamp)
-        print price_insert_values
-        print "Changing price of product id %i to %.2f" % (product_id, price)
-        self.products_db_cursor.execute("INSERT INTO product_price VALUES (%i,%f,'%s')" % price_insert_values)
-        self.products_db_connect.commit()
-        self.update_info_from_database()
-        self.update_products_frame()
-
-    def add_product_to_category_dialog(self, offset=0, window_to_close=None):
-        """A dialog for adding a product to a category"""
-        if window_to_close is not None:
-            window_to_close.destroy()
-        
-        prod_cat_window = Tkinter.Toplevel(self.master)
-        prod_cat_window.title("Add product to category")
-        prod_names = [str(x.id) + " " + x.name for x in self.products]
-        cat_names = [str(x.id) + " " + x.name for x in self.categories]
-        prod_var = Tkinter.StringVar()
-        cat_var = Tkinter.StringVar()
-        
-        if offset > len(prod_names):
-            offset = 0
-        current_prod = prod_names[offset:offset+50]
-        
-        
-        prod_option = Tkinter.OptionMenu(prod_cat_window, prod_var, "", *current_prod)    
-        prod_option.grid(row=0, column=0)
-        cat_option = Tkinter.OptionMenu(prod_cat_window, cat_var, "", *cat_names)
-        cat_option.grid(row=0, column=1)
-        
-        change_products_button = Tkinter.Button(prod_cat_window, text="More Products", command=partial(self.add_product_to_category_dialog, offset+50, prod_cat_window))
-        change_products_button.grid(row=1, column=0)
-        add_to_cat_button = Tkinter.Button(prod_cat_window, text="Add to Category", command=partial(self.add_product_to_category, prod_var, cat_var))
-        add_to_cat_button.grid(row=1, column=1)
-        exit_button = Tkinter.Button(prod_cat_window, text="Exit", command=prod_cat_window.destroy)
-        exit_button.grid(row=1, column=2)
-
-    def add_product_to_category(self, prod_var, cat_var):
-        """Add the specified product to a category"""
-        try:
-            prod_id = int(prod_var.get().split(" ")[0])
-            cat_id = int(cat_var.get().split(" ")[0])
-            print "Product id: %i, category id: %i" % (prod_id, cat_id)
-        
-            self.products_db_cursor.execute("INSERT INTO product_categories VALUES (%i, %i)" % (prod_id, cat_id))
-            self.products_db_connect.commit()
-            
-            self.update_info_from_database()
-            self.update_products_frame()
-            self.update_category_frame()
-
-        except:
-            print "Couldn't get product and/or category"
-
-    def add_product_to_database(self, prod_name, prod_price, prod_by_weight, prod_item, prod_item_amount, tax_rate, is_premarked, window_to_close):
-        """Add a new product to the database"""
-        try:
-            premarked = int(is_premarked.get())
-            name = prod_name.get().strip()
-            if premarked:    
-                price = 0.00
-            else:
-                price = float(prod_price.get())
-            by_weight = int(prod_by_weight.get())
-            tax_rate = int(tax_rate.get())
-            
-            item = int(prod_item.get().split(" ")[0])
-            if bool(by_weight):
-                item_amount = 0
-            else:
-                item_amount = int(prod_item_amount.get())
-         
-            self.unlock_window(window_to_close)
-                
-            cursor = self.products_db_cursor
-            product_insert_values = (name, by_weight, item, item_amount, tax_rate, 1, premarked)
-            cursor.execute("INSERT INTO products VALUES (NULL,'%s',%i,%i,%i,%i,%i,%i)" % product_insert_values)
-            cursor.execute("SELECT product_id FROM products WHERE prod_name='%s'" % name)
-            number_matches = 0
-            product_id = None
-            for product_row in cursor:
-                product_id = product_row[0]
-                number_matches += 1
-            assert number_matches == 1, "Duplicate or no entry in database, must be fixed!"
-            timestamp = timeformat.get_timestamp_string()
-            price_insert_values = (product_id, price, timestamp)
-            print price_insert_values
-            cursor.execute("INSERT INTO product_price VALUES (%i,%f,'%s')" % price_insert_values)
-            print "Rows added to product_price: %i" % cursor.rowcount
-            
-            self.products_db_connect.commit()
-            self.update_info_from_database()
-            self.update_products_frame()
-        except ValueError:
-            print "Unable to add a product to the database, error translating values"
-        finally:
-            window_to_close.destroy()
 
     def update_info_from_database(self):
         """Update the products, categories, items, and product_categories"""
+        original_table_names = ["items", "products", "categories", "product_categories", "product_price", "deal", "deal_price"]
+        django_table_names = ["reg_item","reg_product","reg_category", "reg_productcategory","reg_productprice", "reg_deal", "reg_dealprice"]
+        ITEM, PROD, CAT, PROD_CAT, PROD_PRICE, DEAL, DEAL_PRICE = range(7)
         
+        tables_used = django_table_names
+        
+        old_items = self.items
+        old_products = self.products
+        old_categories = self.categories
+        old_prod_cats = self.prod_cats
+        old_prod_prices = self.prod_prices
+        old_deals = self.deals
+        old_deal_prices = self.deal_prices
         try:
             cursor = self.products_db_cursor
-            cursor.execute("SELECT * FROM items")
-            # Empty all lists after trying to execute a query, in case you need to
-            # continue without a connection to database
+            cursor.execute("SELECT * FROM %s" % tables_used[ITEM])
+            # Empty all lists if we get a valid connection
             self.items = []
             self.products = []
             self.categories = []
@@ -530,37 +124,51 @@ class Register:
             self.prod_prices = []
             self.deals = []
             self.deal_prices = []
-        
-            cursor.execute("SELECT * FROM items")
             for item_row in cursor:
                 self.items.append(tables.Item(item_row))
                     
-            cursor.execute("SELECT * FROM products")
+            cursor.execute("SELECT * FROM %s" % tables_used[PROD])
             for product_row in cursor:
                 self.products.append(tables.Product(product_row))
     
-            cursor.execute("SELECT * FROM categories")
+            cursor.execute("SELECT * FROM %s" % tables_used[CAT])
             for category_row in cursor:
                 self.categories.append(tables.Category(category_row))
                 
-            cursor.execute("SELECT * FROM product_categories")
+            cursor.execute("SELECT * FROM %s" % tables_used[PROD_CAT])
             for product_category_row in cursor:
-                prod = product_category_row[0]
-                cat = product_category_row[1]
+                # Not Used but in there
+                prod_cat_id = product_category_row[0]
+                prod = product_category_row[1]
+                cat = product_category_row[2]
                 self.prod_cats.append([prod, cat])
             
-            cursor.execute("SELECT * FROM product_price")
+            cursor.execute("SELECT * FROM %s" % tables_used[PROD_PRICE])
             for product_price_row in cursor:
                 self.prod_prices.append(tables.ProductPrice(product_price_row))
             
-            cursor.execute("SELECT * FROM deal")
+            cursor.execute("SELECT * FROM %s" % tables_used[DEAL])
             for deal_row in cursor:
                 self.deals.append(tables.Deal(deal_row))
             
-            cursor.execute("SELECT * FROM deal_price")
+            cursor.execute("SELECT * FROM %s" % tables_used[DEAL_PRICE])
             for deal_price_row in cursor:
                 self.deal_prices.append(tables.DealPrice(deal_price_row))
         
+            compare_lists = [old_items == self.items, \
+                old_products == self.products, \
+                old_categories == self.categories, \
+                old_prod_cats == self.prod_cats, \
+                old_prod_prices == self.prod_prices, \
+                old_deals == self.deals, \
+                old_deal_prices == self.deal_prices]
+                # If everything is the same, then return True, otherwise it isn't the same, return False
+            print compare_lists
+            if reduce(lambda x,y: x and y, compare_lists):   
+                return True
+            else:
+                return False
+            
         except sqlite3.OperationalError as op_error:
             print "sqlite3: Unable to read database, make sure path is correct. Details below:"
             print op_error
@@ -568,42 +176,16 @@ class Register:
             print "mysql: Unable to read database, make sure path is correct. Details below:"
             print mysql_op_error
                         
-    def update_admin_frame(self):
-        """Updates the cashier, as well as adds admin buttons if admin logged in"""
-        clear_frame(self.information_frame)
-        button_text_function = [#("Login", self.set_cashier),
-            ("Add Product", self.add_product_to_database_dialog),
-            ("Choose Category", self.add_product_to_category_dialog),
-            ("Add Category", self.add_category),
-            ("Change Product Price", self.adjust_price_dialog),
-            ("Add Basic Item", self.add_basic_item_dialog),
-            ("Add Deal", self.add_deal_dialog), 
-            ("Adjust Deal", self.adjust_deal_amount_price_dialog),
-            #("Enable/Disable Deal", self.disable_deal_dialog),
-            #("Enable/Disable Product", self.disable_product_dialog)
-            ] 
-        
-        number_columns = 10
-        button_index = 0
-        
-        for name, function in button_text_function:
-            button = Tkinter.Button(self.information_frame, text=name, command=function)
-            button.config(width=self.values_dict["admin_button_width"], height=self.values_dict["admin_button_height"])
-            button_row = button_index / number_columns
-            button_column = button_index % number_columns
-            button.grid(row=button_row, column=button_column)
-            button_index += 1
-            
+
     def update_products_frame(self):
-        """Updates the buttons in the product frame"""    
+        """Updates the buttons in the product frame"""
         clear_frame(self.items_frame)
         product_ids = []        
         for product_category in self.prod_cats:
             category = product_category[1]
             if category == self.current_category_id:
                 product_ids.append(product_category[0])
-        product_font_size = int(self.values_dict["product_font_size"])
-        product_font = tkFont.Font(size=product_font_size, weight=tkFont.BOLD)
+        
         product_index = 0
         print product_ids
         
@@ -626,8 +208,12 @@ class Register:
                     button_text += "\n%i / $%.2f" % (deal.product_count, deal_price)
                     
                 product_button.config(text=button_text, width=self.products_button_width, height=self.products_button_height)
-                product_button.config(font=product_font, wraplength=130)
+                product_button.config(font=self.product_font, wraplength=130)
                 product_button.config(command=partial(self.add_to_cart, product))
+                try:
+                    product_button.config(background=product.color)
+                except:
+                    tkMessageBox.showerror("Color not allowed", "The color %s for product %s is not allowed, check spelling" % (product.color, product.name))
                 prod_row = product_index / self.products_column_width
                 prod_col = product_index % self.products_column_width
                 product_button.grid(row=prod_row, column=prod_col)
@@ -644,10 +230,17 @@ class Register:
         """Updates the categories in the category frame"""        
         clear_frame(self.category_frame)
         category_index = 0
+
         for category in self.categories:
             cat_button = Tkinter.Button(self.category_frame, wraplength=80)
+            try:
+                cat_button.config(background=category.color)
+            except:
+                    tkMessageBox.showerror("Color not allowed", "The color %s for category %s is not allowed, check spelling" % (category.color, category.name))
             cat_button.config(text=category.name, height=self.categories_button_height, width=self.categories_button_width)
             cat_button.config(command=partial(self.change_category, category.id))
+            cat_button.config(font=self.category_font)
+            cat_button.config(wraplength=120)
             cat_row = category_index / self.categories_column_width
             cat_col = category_index % self.categories_column_width
             cat_button.grid(row=cat_row, column=cat_col)
@@ -655,10 +248,13 @@ class Register:
 
     def change_category(self, category_id):
         """Change the current category"""
-        self.current_category_id = category_id
-        self.update_info_from_database()
-        self.update_category_frame()
-        self.update_products_frame()
+        if self.current_category_id == category_id:
+            return
+        else:
+            self.current_category_id = category_id
+            if self.update_info_from_database() == False:
+                self.update_category_frame()
+            self.update_products_frame()
 
     def clear_cart(self):
         """Remove all items from cart"""
@@ -701,7 +297,7 @@ class Register:
             # get price
             premarked_price = tkSimpleDialog.askfloat("Premarked Price", "Price:")
             if premarked_price is not None:
-                cart_entry = CartEntry.ProductCartEntry(product, premarked_price, 1)
+                cart_entry = CartEntry.ProductCartEntry(product, 1, premarked_price )
                 self.cart.append(cart_entry)
         else:
             # """Product not by weight"""
@@ -776,26 +372,26 @@ class Register:
 
     def add_cart_item_labels(self, frame, cart_item, cart_row):
         """Add labels to all items in the cart"""
-        bold_font = tkFont.Font(size=14, weight=tkFont.BOLD)
+        
         self.cart_item_labels_width = 10
         name_label = Tkinter.Label(frame, anchor=Tkinter.W)
-        name_label.config(text=cart_item.get_description(), width=self.cart_item_labels_width, font=bold_font)
+        name_label.config(text=cart_item.get_description(), width=self.cart_item_labels_width, font=self.cart_item_font)
         name_label.grid(row=cart_row + 1, column=0)
         
         amount_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
-        if cart_item.product.is_by_weight:
+        if cart_item.product.is_by_weight or cart_item.product.is_premarked:
             amount_button.config(text="%.2f" % cart_item.get_amount())
         else:
             amount_button.config(text="%i" % cart_item.get_amount())
-        amount_button.config(command=partial(self.change_cart_amount, cart_row), font=bold_font)
+        amount_button.config(command=partial(self.change_cart_amount, cart_row), font=self.cart_item_font)
         amount_button.grid(row=cart_row + 1, column=1)
         
         price_label = Tkinter.Label(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
-        price_label.config(text="%.2f" % cart_item.price(), font=bold_font)
+        price_label.config(text="%.2f" % cart_item.price(), font=self.cart_item_font)
         price_label.grid(row=cart_row + 1, column=2)
         
         delete_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
-        delete_button.config(text="X", font=bold_font)
+        delete_button.config(text="X", font=self.cart_item_font)
         delete_button.config(command=partial(self.delete_item, cart_row))
         delete_button.grid(row=cart_row + 1, column=3)
 
@@ -803,36 +399,39 @@ class Register:
         """Update the totals of all items in the cart"""
         clear_frame(self.totals_frame)
         totals_font = tkFont.Font(family="Arial", size=12)
-        totals_bold = tkFont.Font(family="Arial", size=12, weight=tkFont.BOLD)
+        
+        
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
+       
+        total_label = Tkinter.Label(self.totals_frame, text="Total", anchor=Tkinter.W, font=self.total_font, background="white")
+        total_label.grid(row=0, column=0)
+        
+        total_value = Tkinter.Label(self.totals_frame, text="%.2f" % total, anchor=Tkinter.E, font=self.total_font)
+        total_value.grid(row=0, column=1)
         subtotal_label = Tkinter.Label(self.totals_frame, text="Subtotal", anchor=Tkinter.W, width=15, font=totals_font)
-        subtotal_label.grid(row=0, column=0)
+        subtotal_label.grid(row=2, column=0)
 
         subtotal_value = Tkinter.Label(self.totals_frame, text="%.2f" % sub, anchor=Tkinter.E, width=15, font=totals_font)
-        subtotal_value.grid(row=0, column=1)
+        subtotal_value.grid(row=2, column=1)
         
         ed_tax_label = Tkinter.Label(self.totals_frame, text="Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
-        ed_tax_label.grid(row=1, column=0)
+        ed_tax_label.grid(row=3, column=0)
         
         ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
-        ed_tax_value.grid(row=1, column=1)
+        ed_tax_value.grid(row=3, column=1)
         
         non_ed_tax_label = Tkinter.Label(self.totals_frame, text="Non Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
-        non_ed_tax_label.grid(row=2, column=0)
+        non_ed_tax_label.grid(row=4, column=0)
         
         non_ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % non_ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
-        non_ed_tax_value.grid(row=2, column=1)
+        non_ed_tax_value.grid(row=4, column=1)
         
-        total_label = Tkinter.Label(self.totals_frame, text="Total", anchor=Tkinter.W, width=15, font=totals_bold)
-        total_label.grid(row=3, column=0)
-        
-        total_value = Tkinter.Label(self.totals_frame, text="%.2f" % total, anchor=Tkinter.E, width=15, font=totals_bold)
-        total_value.grid(row=3, column=1)
+       
 
-    def receipt_print(self):
+    def receipt_print(self, trans_number):
         """Send the receipt to the printer"""        
         total, subtotal, tax_edible, tax_non_edible = self.get_total_price()
-        receipt_info = receipt.ReceiptInfo(self.transaction_number, 
+        receipt_info = receipt.ReceiptInfo(trans_number, 
                 total, subtotal, tax_edible, tax_non_edible, 
                 self.edible_tax_rate, self.nonedible_tax_rate)
         receipt.print_receipt(self.cart, receipt_info, self.receipt_chars_per_inch)
@@ -851,24 +450,38 @@ class Register:
         self.cart_frames += 1
         return add_frame(self.cart_frame, self.cart_width, f_height, b_color, row, column)    
     
+    def update_debug_frame(self):
+        """Adds options for changing what the transactions go into"""
+        
+        r1 = Tkinter.Radiobutton(self.debug_frame, text="Grove", variable=self.radio_variable, value=0)
+        r2 = Tkinter.Radiobutton(self.debug_frame, text="Naples 3rd St", variable=self.radio_variable, value=1)
+        r3 = Tkinter.Radiobutton(self.debug_frame, text="Marco Market", variable=self.radio_variable, value=2)
+        r4 = Tkinter.Radiobutton(self.debug_frame, text="Naples Davis", variable=self.radio_variable, value=3)
+        r5 = Tkinter.Radiobutton(self.debug_frame, text="Bonita", variable=self.radio_variable, value=4)
+        
+        col = 0
+        for r in [r1,r2,r3,r4,r5]:
+            r.grid(row=0, column=col)
+            col = col + 1
+    
     def update_payment_frame(self):
         """Adds the payment frame buttons to the register window"""
         
-        bold_font = tkFont.Font(weight=tkFont.BOLD, size=11)
+        payment_font = tkFont.Font(weight=tkFont.BOLD, size=self.payment_font_size)
         cash_button = Tkinter.Button(self.payment_type_frame, text="Cash", command=self.cash_pay, width=self.payment_button_width, height=self.payment_button_height)
-        cash_button.config(font=bold_font)
+        cash_button.config(font=payment_font)
         cash_button.grid(row=0, column=0)
     
         credit_button = Tkinter.Button(self.payment_type_frame, text="Credit Card", command=self.credit_pay, width=self.payment_button_width, height=self.payment_button_height)
-        credit_button.config(font=bold_font)
+        credit_button.config(font=payment_font)
         credit_button.grid(row=0, column=1)
     
         check_button = Tkinter.Button(self.payment_type_frame, text="Check", command=self.check_pay, width=self.payment_button_width, height=self.payment_button_height)
-        check_button.config(font=bold_font)
+        check_button.config(font=payment_font)
         check_button.grid(row=0, column=2)
     
         no_sale_button = Tkinter.Button(self.payment_type_frame, text="No Sale", command=self.no_sale, width=self.payment_button_width, height=self.payment_button_height)
-        no_sale_button.config(font=bold_font)
+        no_sale_button.config(font=payment_font)
         no_sale_button.grid(row=0, column=3)
         
     def no_sale(self):
@@ -978,47 +591,62 @@ class Register:
             
     def finish_transaction(self):
         """Logs the transaction and prints receipt, clears cart for next transaction"""
-        self.log_transaction()
-        self.receipt_print()
-        
-    def get_transaction_number(self):
-        """Get the number of the next transaction"""
-        try:
-            self.products_db_cursor.execute("SELECT max(transaction_id) FROM transaction_total")
-            max_trans_number = 0
-            for max_transaction_number_row in self.products_db_cursor:
-                max_trans_number = max_transaction_number_row[0]
-            if max_trans_number is None:
-                return 1
-            else:
-                return max_trans_number + 1
-        except:
-            print "Couldn't connect to database for transaction number"
-            return -1
+        trans_number = self.log_transaction()
+        if trans_number != -1:
+            self.receipt_print(trans_number)
             
+    def get_market_location(self):
+        locations = ['grove','naples_third','marco','naples_davis','bonita']
+        return locations[self.radio_variable.get()]
+    
     def log_transaction(self):
         """Log the transaction into the database"""
         # Returns -1 if no database connection
-        trans_number = self.get_transaction_number()
+        #trans_number = self.get_transaction_number()
         # ----- #
         #trans_number = -1
-        self.transaction_number = trans_number
+        #self.transaction_number = trans_number
+        market_val = False
+        if self.radio_variable.get() !=0: # Make sure adding a regular value
+            market_val = tkMessageBox.askokcancel("Adding a Market Value", "Adding a market value! If not cancel and change check box at bottom of screen")
+            if market_val is False:
+                tkMessageBox.showinfo("Canceled add", "Canceled the transaction, disregard the next pop up")
+                return -1
+    
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
-        timestamp = timeformat.get_timestamp_string()
+        #timestamp = timeformat.get_timestamp_string()
         cashier = self.cashierVar.get()
         time_to_finish = int(time.time() - self.start_time)
-        insert_values = (trans_number, total, sub, ed_tax, non_ed_tax, timestamp, cashier, time_to_finish)
+        location = self.get_market_location()
+        if market_val == True:
+            got_date = False
+            while got_date != True:
+                time_string = tkSimpleDialog.askstring("Select Date for entry", "Enter date in form MM/DD/YYYY")
+                date_nums = time_string.split("/")
+                if len(date_nums) != 3:
+                    tkMessageBox.showwarning("Incorrect Date Format", "You have entered the date incorrectly")
+                elif int(date_nums[0]) > 12 or int(date_nums[1]) > 31:
+                    tkMessageBox.showwarning("Invalid Date", "You have entered an invalid date")
+                else:
+                    got_date = True
+            timestamp = datetime.datetime(int(date_nums[2]), int(date_nums[0]), int(date_nums[1]))
+        else:
+            timestamp = str(datetime.datetime.now())
+        insert_values = (total, sub, ed_tax, non_ed_tax, timestamp, cashier, time_to_finish, location)
+        print insert_values
         print "Logging transaction"
-    
+        sql = "INSERT INTO " + TRANSACTION_TOTAL_TABLE + " VALUES (NULL,%f,%f,%f,%f,'%s','%s',%i,'%s');" % insert_values
+        self.products_db_cursor.execute(sql)
+        trans_number = self.products_db_connect.insert_id()
+        
         sql_statements = []
-        sql_statements.append("INSERT INTO transaction_total VALUES (%i,%f,%f,%f,%f,'%s','%s',%i);" % insert_values)
         for entry in self.cart:
             entry_insert_values = (trans_number, entry.is_product(), entry.get_transaction_item_id(), entry.get_amount())
-            sql_statements.append("INSERT INTO transaction_item VALUES (%i,%i,%i,%f);" % entry_insert_values)
+            sql_statements.append("INSERT INTO " + TRANSACTION_ITEM_TABLE + " VALUES (NULL,%i,%i,%i,%f);" % entry_insert_values)
         
         if trans_number == -1:
             print "Saving temporary to file"
-            transaction_file = open("UnsavedTrans/" + str(timestamp) + str(cashier) + ".sql", "w")
+            transaction_file = open("UnsavedTrans/" + str(datetime.datetime.now()) + str(cashier) + ".sql", "w")
             sql_text = reduce(lambda x,y: x+"\n"+y, sql_statements)
             transaction_file.write(sql_text)
             transaction_file.close()
@@ -1028,7 +656,8 @@ class Register:
             self.products_db_connect.commit()
         
             # save to file 
-            
+        return trans_number
+        
     def get_subtotal_price(self):
         """Determine the price of all items in the cart"""
         return sum(cart_item.price() for cart_item in self.cart)
@@ -1054,9 +683,10 @@ class Register:
         """Change the amount of a product entry in a cart"""
         print 'Changing amount of item in cart'
         self.simple_lock()
-        #np = NumberPadDialog.NumberPadDialog()
         if self.cart[cart_row].product.is_by_weight:
             amount = tkSimpleDialog.askfloat("Enter new weight", "Weight:")
+        elif self.cart[cart_row].product.is_premarked:
+            amount = tkSimpleDialog.askfloat("Enter new amount", "Amount:")
         else:
             amount = tkSimpleDialog.askinteger("Enter new amount", "Amount:")
         self.simple_unlock()
@@ -1070,28 +700,37 @@ class Register:
             self.cart[cart_row].change_amount(amount)
         self.update_cart()
 
-    def set_cashier(self):
-        """Set the name of the current cashier"""
-        # Should do this from a list in the database
-        cashier = tkSimpleDialog.askstring("Cashier Name", "Name:")
-        if cashier is None:
-            print "Canceled cashier entry"
-        elif cashier.strip() == "":
-            print "Must be non empty string"
-        else:
-            self.cashierVar.set(cashier)
-        self.update_admin_frame()
- 
     def read_products_categories_constants(self):
+        # Product
+        self.product_font_size = int(self.values_dict["product_font_size"])
         self.products_column_width = int(self.values_dict["products_column_width"])
-        self.categories_column_width = int(self.values_dict["categories_column_width"])
-        
         self.products_button_width = int(self.values_dict["products_button_width"])
         self.products_button_height = int(self.values_dict["products_button_height"])
-        
+
+        # Category        
+        self.category_font_size = int(self.values_dict["category_font_size"])
+        self.categories_column_width = int(self.values_dict["categories_column_width"])
         self.categories_button_width  = int(self.values_dict["categories_button_width"])
         self.categories_button_height = int(self.values_dict["categories_button_height"])
-    
+        
+        # Payment buttons
+        self.payment_font_size = int(self.values_dict["payment_font_size"])
+        self.payment_button_width = int(self.values_dict["payment_button_width"])
+        self.payment_button_height = int(self.values_dict["payment_button_height"])
+        
+        # Cart item
+        self.cart_item_font_size = int(self.values_dict["cart_item_font_size"])
+        
+        # Cart totals
+        self.cart_total_font_size = int(self.values_dict["cart_total_font_size"])
+        
+        # Set up fonts
+        self.product_font = tkFont.Font(size=self.product_font_size, weight=tkFont.BOLD)
+        self.category_font = tkFont.Font(size=self.category_font_size, weight=tkFont.BOLD)
+        self.payment_font = tkFont.Font(size=self.payment_font_size, weight=tkFont.BOLD)
+        self.cart_item_font = tkFont.Font(size=self.cart_item_font_size, weight=tkFont.BOLD)
+        self.total_font = tkFont.Font(size=self.cart_total_font_size, weight=tkFont.BOLD)
+        
     def __init__(self, master, init_file_name, scale):
         """Initiate all variables for the register program"""
         try:
@@ -1101,7 +740,9 @@ class Register:
         
         self.values_dict = ReadSettings.get_values_from_init_file(init_file)
         print self.values_dict
-        
+        # Radio variable for 
+        self.radio_variable = Tkinter.IntVar()
+        self.radio_variable.set(0) # Set to grove initially
         self.scale = scale
         self.master = master
         self.cashierVar = Tkinter.StringVar()
@@ -1118,6 +759,12 @@ class Register:
         self.start_time = time.time()
         
         cursor, conn = DatabaseConnect.connect(self.values_dict)
+        # Early exit if can't connect to database
+        if cursor is None:
+            tkMessageBox.showwarning("Database Error", "Could not connect to database, check errors on terminal")
+            master.destroy()
+            return 
+        
         self.products_db_cursor = cursor
         self.products_db_connect = conn
          
@@ -1148,8 +795,7 @@ class Register:
         self.receipt_chars_per_inch = int(self.values_dict["receipt_chars_per_inch"])
         print self.receipt_chars_per_inch
         
-        self.payment_button_width = int(self.values_dict["payment_button_width"])
-        self.payment_button_height = int(self.values_dict["payment_button_height"])
+        
         
         self.products_frames = 0
         self.cart_frames = 0
@@ -1185,33 +831,40 @@ class Register:
         self.cart_items_frame = self.add_cart_frame(cart_items_height, self.values_dict["cart_items_frame_color"])
         self.totals_frame = self.add_cart_frame(totals_height, self.values_dict["totals_frame_color"])
         
-        self.update_admin_frame()
+        #self.update_admin_frame()
         self.update_category_frame()
         self.update_products_frame()
         self.update_cart()
         self.update_payment_frame()            
-
-def getAddress():
-    import commands
-    text = commands.getoutput("ip addr")
-    for line in text.split("\n"):
-        clean_line = line.strip()
-        if "inet " in clean_line:
-            addr = clean_line.split(" ")[1]
-            if "127.0.0.1" not in addr:
-                return addr.split("/")[0]
-            
+        self.update_debug_frame()
+        
 def startRegister():
     """Start the register, connect to scale"""
+    import os
     init_file_name = "settings.txt"
     root = Tkinter.Tk()
+    root.title("Register")
     
-    root.title("Register - %s" % str(getAddress()))  # aDD IP address in title
-    scale = abscale.ABScale("/dev/ttyUSB0")
-    if scale.is_scale_connected():
-        reg = Register(root, init_file_name, scale)
-    else:
-        reg = Register(root, init_file_name, None)        
+    scale = None
+    possible_connection = False
+    for usb_number in range(4):
+        scale_path = "/dev/ttyUSB%i" % usb_number
+        if os.path.exists(scale_path):
+            possible_connection = True
+            scale = abscale.ABScale(scale_path)
+            if scale.is_scale_connected():
+                break
+            else:
+                scale = None
+    if scale is None:
+        if not possible_connection:
+            tkMessageBox.showwarning("Scale Not Connected", "Scale is not connected.\
+                Check connections and restart if scale is present")
+        else:
+            tkMessageBox.showwarning("Scale Not Connected", "Scale is not connected \
+                but a possible scale is detected. Check permissions and restart if scale is present")
+    
+    Register(root, init_file_name, scale)        
     root.mainloop()
         
 if __name__ == "__main__":

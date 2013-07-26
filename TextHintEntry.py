@@ -24,14 +24,14 @@ class TextHintEntry(Tkinter.Entry):
         #self.number_times += 1
         self.matching_hints = []
         current_entry_text = self.get().lower()
-        #print "Current text is '%s'" % current_entry_text
+        print "Current text is '%s'" % current_entry_text
         for hint in self._hint_list:
-            #print "Looking for text in '%s'" % hint        
+            print "Looking for text in '%s'" % hint        
             if hint.lower().find(current_entry_text) >= 0:
                 self.matching_hints.append(hint)
         
-        #print "Found %i matches" % len(self.matching_hints)
-        #print self.matching_hints
+        print "Found %i matches" % len(self.matching_hints)
+        print self.matching_hints
         self._option_box["menu"].delete(0, Tkinter.END)
         current_index =  0
         for hint in self.matching_hints[:self._MAX_MATCHES]:

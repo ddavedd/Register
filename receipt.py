@@ -30,6 +30,8 @@ def receipt_cart(cart, receipt_info):
         if isinstance(entry, CartEntry.ProductCartEntry): 
             if entry.product.is_by_weight:
                 text += "%.2f lbs %s x $%.2f/lb = $%.2f\n" % (entry.get_amount(), entry.get_description(), entry.price_per, entry.price() )
+            elif entry.product.is_premarked:
+                text += "$%.2f %s\n" % (entry.get_amount(), entry.get_description())
             else:
                 text += "%i %s x $%.2f = $%.2f\n" % (entry.get_amount(), entry.get_description(), entry.price_per, entry.price())
         else:
@@ -45,7 +47,8 @@ def receipt_cart(cart, receipt_info):
 
 def receipt_info_header():
     """Information to add to the top of the receipt"""
-    text = "The Farm\n34 E 63rd St\nwww.thefarmwestmont.com\n(630)960-3965\n\n"
+    #text = "The Farm\n34 E 63rd St\nwww.thefarmwestmont.com\n(630)960-3965\n\n"
+    text = "South Naples Citrus Grove\n341 Sabal Palm Road, Naples, FL 34114\nnaplescitrus.com\n(239) 774-3838\n\n"
     return text
 
 def receipt_info_footer():
@@ -74,8 +77,7 @@ def print_receipt(cart, receipt_info, receipt_chars_per_inch):
 
 
 def print_no_sale():
-    """Send a blank print job to printer so drawer opens"""
-    text = "\n\n\n"
+    text="\n\n\n"
     receipt_file_name = "receipts/blank.txt"
     receipt_file = open(receipt_file_name, "w")
     receipt_file.write(text)

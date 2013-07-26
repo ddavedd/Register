@@ -9,7 +9,7 @@ read -p "Copy Value in ~/.ssh/id_rsa.pub to Github SSH page before continuing"
 mkdir ~/Register
 cd ~/Register
 git init
-git remote add git@github.com:ddavedd/Register.git
+git remote add origin git@github.com:ddavedd/Register.git
 git pull origin master
 sudo apt-get install python-tk
 sudo apt-get install python-mysqldb

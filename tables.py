@@ -5,29 +5,29 @@ import timeformat
 class Deal:
     """A special for a multiple number of products"""
     def __init__(self, db_row):
-        deal_id, product_id, product_count, enabled = range(4)
+        deal_id, product_id, product_count, deal_price, timestamp, enabled = range(6)
         self.id = db_row[deal_id]
         self.product_id = db_row[product_id]
         self.product_count = db_row[product_count]
+        self.deal_price = db_row[deal_price]
+        self.timestamp = db_row[timestamp]
         self.enabled = bool(db_row[enabled])
 
     def __eq__(self, other):
         #print "Checking if two deals equal"
         return isinstance(other, Deal) and self.__dict__ == other.__dict__
-                 
 
-class DealPrice:
-    """The price for a deal on products"""
-    def __init__(self, db_row):
-        deal_price_id, deal_price, deal_timestamp = range(3) 
-        self.id = db_row[deal_price_id]
-        self.price = db_row[deal_price]
-        self.timestamp = db_row[deal_timestamp]
-
-    def __eq__(self, other):
-        #print "Checking if two deal prices equal"
-        return isinstance(other, DealPrice) and self.__dict__ == other.__dict__
-        
+#class DealPrice:
+#    """The price for a deal on products"""
+#    def __init__(self, db_row):
+#       deal_price_id, deal_price, deal_timestamp = range(3) 
+#        self.id = db_row[deal_price_id]
+#        self.price = db_row[deal_price]
+#        self.timestamp = db_row[deal_timestamp]
+#
+#    def __eq__(self, other):
+#        #print "Checking if two deal prices equal"
+#        return isinstance(other, DealPrice) and self.__dict__ == other.__dict__
 
 class ProductPrice:
     """The price of a product"""
@@ -40,7 +40,6 @@ class ProductPrice:
     def __eq__(self, other):
         #print "Checking if two product prices equal"
         return isinstance(other, ProductPrice) and self.__dict__ == other.__dict__
-
         
 class Item:
     """A basic item from the database"""
@@ -52,7 +51,6 @@ class Item:
     def __eq__(self, other):
         #print "Checking if two items equal"
         return isinstance(other, Item) and self.__dict__ == other.__dict__
-
        
 class Product:
     """A product with a price, tax_rate, etc."""
@@ -79,8 +77,6 @@ class Product:
     def __eq__(self, other):
         #print "Checking if two products equal"
         return isinstance(other, Product) and self.__dict__ == other.__dict__
-
-
 
 class Category:
     """A category that products are lumped in to"""

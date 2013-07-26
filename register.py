@@ -17,8 +17,8 @@ import DatabaseConnect
 import MySQLdb
 import datetime
 CART_RIGHT = False       
-TRANSACTION_TOTAL_TABLE = "reg_transactiontotal"
-TRANSACTION_ITEM_TABLE = "reg_transactionitem"
+TRANSACTION_TOTAL_TABLE = "register_transactiontotal"
+TRANSACTION_ITEM_TABLE = "register_transactionitem"
 
 
 def add_frame(master, f_width, f_height, background_color, row, column):
@@ -38,9 +38,6 @@ def clear_frame(frame):
 
 class Register:
     """The basic component of our register, should be MVC'd if possible"""
-    
-
-
     def disable_everything(self):
         """Disable everything so that you have to finish what you are currently doing"""
         self.set_state_everything(self.master_frame, "disabled")
@@ -84,25 +81,17 @@ class Register:
             window.destroy()
 
 
-    def get_current_deal_price(self, deal_id):
-        """Get the price of the newest deal"""
-        matching_deal_prices = [x for x in self.deal_prices if x.id == deal_id]
-        current_deal = max(matching_deal_prices, key=lambda x: x.timestamp)
-        return current_deal.price
-    
-    def get_deal_price_dict(self):
-        """Make a dictionary of prices and deals"""
-        deal_price_dict = {}
-        for deal in self.deals:
-            deal_price_dict[deal.id] = self.get_current_deal_price(deal.id) 
-        return deal_price_dict
-
+    #def get_current_deal_price(self, deal_id):
+    #    """Get the price of the newest deal"""
+    #    matching_deal_prices = [x for x in self.deal_prices if x.id == deal_id]
+    #    current_deal = max(matching_deal_prices, key=lambda x: x.timestamp)
+    #    return current_deal.price
 
     def update_info_from_database(self):
         """Update the products, categories, items, and product_categories"""
-        original_table_names = ["items", "products", "categories", "product_categories", "product_price", "deal", "deal_price"]
-        django_table_names = ["reg_item","reg_product","reg_category", "reg_productcategory","reg_productprice", "reg_deal", "reg_dealprice"]
-        ITEM, PROD, CAT, PROD_CAT, PROD_PRICE, DEAL, DEAL_PRICE = range(7)
+        # original_table_names = ["items", "products", "categories", "product_categories", "product_price", "deal", "deal_price"]
+        django_table_names = ["register_item","register_product","register_category", "register_productcategory","register_productprice", "register_deal", "register_dealprice"]
+        ITEM, PROD, CAT, PROD_CAT, PROD_PRICE, DEAL = range(6)
         
         tables_used = django_table_names
         
@@ -112,7 +101,7 @@ class Register:
         old_prod_cats = self.prod_cats
         old_prod_prices = self.prod_prices
         old_deals = self.deals
-        old_deal_prices = self.deal_prices
+        
         try:
             cursor = self.products_db_cursor
             cursor.execute("SELECT * FROM %s" % tables_used[ITEM])
@@ -123,7 +112,7 @@ class Register:
             self.prod_cats = []
             self.prod_prices = []
             self.deals = []
-            self.deal_prices = []
+
             for item_row in cursor:
                 self.items.append(tables.Item(item_row))
                     
@@ -150,10 +139,6 @@ class Register:
             cursor.execute("SELECT * FROM %s" % tables_used[DEAL])
             for deal_row in cursor:
                 self.deals.append(tables.Deal(deal_row))
-            
-            cursor.execute("SELECT * FROM %s" % tables_used[DEAL_PRICE])
-            for deal_price_row in cursor:
-                self.deal_prices.append(tables.DealPrice(deal_price_row))
         
             compare_lists = [old_items == self.items, \
                 old_products == self.products, \
@@ -161,7 +146,7 @@ class Register:
                 old_prod_cats == self.prod_cats, \
                 old_prod_prices == self.prod_prices, \
                 old_deals == self.deals, \
-                old_deal_prices == self.deal_prices]
+                ]
                 # If everything is the same, then return True, otherwise it isn't the same, return False
             print compare_lists
             if reduce(lambda x,y: x and y, compare_lists):   
@@ -189,35 +174,37 @@ class Register:
         product_index = 0
         print product_ids
         
-        
         for product in self.products:
             if product.id in product_ids:
-                #if product.enabled:
-                product_button = Tkinter.Button(self.items_frame)
-                product_price = self.get_product_price(product.id)
-                if product.is_premarked:
-                    button_text = "%s\n\nPremarked"  % (product.name)
-                else:
-                    button_text = "%s\n\n$%.2f" % (product.name, product_price)
-                if product.is_by_weight:
-                    button_text += "/lb"
-                
-                deal = self.get_product_deal(product.id)
-                if deal is not None:
-                    deal_price = self.get_current_deal_price(deal.id)
-                    button_text += "\n%i / $%.2f" % (deal.product_count, deal_price)
+                if product.enabled:
+                    product_button = Tkinter.Button(self.items_frame)
+                    product_price = self.get_product_price(product.id)
+                    # How the product is displayed in the product frame
+                    if product.is_premarked:
+                        button_text = "%s\n\nPremarked" % (product.name)
+                    else:
+                        button_text = "%s\n\n$%.2f" % (product.name, product_price)
+                    if product.is_by_weight:
+                        button_text += "/lb"
                     
-                product_button.config(text=button_text, width=self.products_button_width, height=self.products_button_height)
-                product_button.config(font=self.product_font, wraplength=130)
-                product_button.config(command=partial(self.add_to_cart, product))
-                try:
-                    product_button.config(background=product.color)
-                except:
-                    tkMessageBox.showerror("Color not allowed", "The color %s for product %s is not allowed, check spelling" % (product.color, product.name))
-                prod_row = product_index / self.products_column_width
-                prod_col = product_index % self.products_column_width
-                product_button.grid(row=prod_row, column=prod_col)
-                product_index += 1
+                    print "Product" + str(product)
+                    deal = self.find_most_recent_deal(product.id)
+                    # What to show if there is a deal
+                    #if deal is not None:
+                    #    deal_price = deal.deal_price
+                    #    button_text += "\n%i / $%.2f" % (deal.product_count, deal_price)
+                        
+                    product_button.config(text=button_text, width=self.products_button_width, height=self.products_button_height)
+                    product_button.config(font=self.product_font, wraplength=130)
+                    product_button.config(command=partial(self.add_to_cart, product))
+                    try:
+                        product_button.config(background=product.color)
+                    except:
+                        tkMessageBox.showerror("Color not allowed", "The color %s for product %s is not allowed, check spelling" % (product.color, product.name))
+                    prod_row = product_index / self.products_column_width
+                    prod_col = product_index % self.products_column_width
+                    product_button.grid(row=prod_row, column=prod_col)
+                    product_index += 1
 
     def get_product_deal(self, product_id):
         """Get a deal for the product"""
@@ -326,6 +313,19 @@ class Register:
         self.update_cart_items()
         self.update_cart_totals()
 
+    def find_most_recent_deal(self, product_id):
+        product_deals = [d for d in self.deals if product_id == d.product_id]
+        if len(product_deals) == 0:
+            return None
+        else:
+            # Return most recent deal if it is enabled
+            print product_deals[0]
+            most_recent_deal = max(product_deals, key=lambda x: x.timestamp)
+            if most_recent_deal.enabled:
+                return most_recent_deal
+            else:
+                return None
+            
     def update_cart_items(self):
         """Update the items in the cart, taking into account deals"""
         clear_frame(self.cart_items_frame)
@@ -339,29 +339,14 @@ class Register:
         for cart_item in self.cart:
             if isinstance(cart_item, CartEntry.ProductCartEntry):
             #Check for deals
-                deals = [x for x in self.deals if x.product_id == cart_item.product.id]
-                if len(deals) > 0:
-                    print "Checking for deals"
-                    deal_price_dict = self.get_deal_price_dict()
-                    deal = deals[0]
-                
-                    number_deals = cart_item.get_amount() / deal.product_count            
-                    products_left = cart_item.get_amount() % deal.product_count
-                    if products_left > 0:
-                        new_cart.append(CartEntry.ProductCartEntry(cart_item.product, cart_item.price_per, products_left))
-                    if number_deals > 0:
-                        found = False
-                        for new_cart_item in new_cart:
-                            if isinstance(new_cart_item, CartEntry.DealCartEntry) and new_cart_item.deal.id == deal.id:
-                                new_cart_item.change_amount(new_cart_item.get_amount() + number_deals)
-                                found = True
-                        if not found:
-                            new_cart.append( CartEntry.DealCartEntry(cart_item.product, deal, deal_price_dict[deal.id], number_deals))
-                else:
-                    new_cart.append(cart_item)
-            else:
+                # Find newest deal
+                most_recent_deal = self.find_most_recent_deal(cart_item.product.id)
                 new_cart.append(cart_item)
-        
+                if most_recent_deal is not None:
+                    number_deals = cart_item.get_amount() / most_recent_deal.product_count 
+                    if number_deals > 0:           
+                        new_cart.append( CartEntry.DealCartEntry(cart_item.product, most_recent_deal, most_recent_deal.deal_price, number_deals))
+                    
         self.cart = new_cart
         #print self.cart
         cart_row = 0
@@ -378,22 +363,30 @@ class Register:
         name_label.config(text=cart_item.get_description(), width=self.cart_item_labels_width, font=self.cart_item_font)
         name_label.grid(row=cart_row + 1, column=0)
         
-        amount_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
-        if cart_item.product.is_by_weight or cart_item.product.is_premarked:
-            amount_button.config(text="%.2f" % cart_item.get_amount())
+        
+        
+        if isinstance(cart_item, CartEntry.ProductCartEntry):
+            amount_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
+            if cart_item.product.is_by_weight or cart_item.product.is_premarked:
+                amount_button.config(text="%.2f" % cart_item.get_amount())
+            else:
+                amount_button.config(text="%i" % cart_item.get_amount())
+            amount_button.config(command=partial(self.change_cart_amount, cart_row), font=self.cart_item_font)
+            amount_button.grid(row=cart_row + 1, column=1)
         else:
-            amount_button.config(text="%i" % cart_item.get_amount())
-        amount_button.config(command=partial(self.change_cart_amount, cart_row), font=self.cart_item_font)
-        amount_button.grid(row=cart_row + 1, column=1)
+            amount_label = Tkinter.Label(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
+            amount_label.config(text="%i" % cart_item.get_amount(), font=self.cart_item_font)
+            amount_label.grid(row=cart_row + 1, column=1)
         
         price_label = Tkinter.Label(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
         price_label.config(text="%.2f" % cart_item.price(), font=self.cart_item_font)
         price_label.grid(row=cart_row + 1, column=2)
         
-        delete_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
-        delete_button.config(text="X", font=self.cart_item_font)
-        delete_button.config(command=partial(self.delete_item, cart_row))
-        delete_button.grid(row=cart_row + 1, column=3)
+        if isinstance(cart_item, CartEntry.ProductCartEntry):
+            delete_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
+            delete_button.config(text="X", font=self.cart_item_font)
+            delete_button.config(command=partial(self.delete_item, cart_row))
+            delete_button.grid(row=cart_row + 1, column=3)
 
     def update_cart_totals(self):
         """Update the totals of all items in the cart"""
@@ -453,16 +446,16 @@ class Register:
     def update_debug_frame(self):
         """Adds options for changing what the transactions go into"""
         
-        r1 = Tkinter.Radiobutton(self.debug_frame, text="Grove", variable=self.radio_variable, value=0)
-        r2 = Tkinter.Radiobutton(self.debug_frame, text="Naples 3rd St", variable=self.radio_variable, value=1)
-        r3 = Tkinter.Radiobutton(self.debug_frame, text="Marco Market", variable=self.radio_variable, value=2)
-        r4 = Tkinter.Radiobutton(self.debug_frame, text="Naples Davis", variable=self.radio_variable, value=3)
-        r5 = Tkinter.Radiobutton(self.debug_frame, text="Bonita", variable=self.radio_variable, value=4)
+        #r1 = Tkinter.Radiobutton(self.debug_frame, text="Grove", variable=self.radio_variable, value=0)
+        #r2 = Tkinter.Radiobutton(self.debug_frame, text="Naples 3rd St", variable=self.radio_variable, value=1)
+        #r3 = Tkinter.Radiobutton(self.debug_frame, text="Marco Market", variable=self.radio_variable, value=2)
+        #r4 = Tkinter.Radiobutton(self.debug_frame, text="Naples Davis", variable=self.radio_variable, value=3)
+        #r5 = Tkinter.Radiobutton(self.debug_frame, text="Bonita", variable=self.radio_variable, value=4)
         
-        col = 0
-        for r in [r1,r2,r3,r4,r5]:
-            r.grid(row=0, column=col)
-            col = col + 1
+        #col = 0
+        #for r in [r1,r2,r3,r4,r5]:
+        #    r.grid(row=0, column=col)
+        #    col = col + 1
     
     def update_payment_frame(self):
         """Adds the payment frame buttons to the register window"""
@@ -594,48 +587,21 @@ class Register:
         trans_number = self.log_transaction()
         if trans_number != -1:
             self.receipt_print(trans_number)
-            
-    def get_market_location(self):
-        locations = ['grove','naples_third','marco','naples_davis','bonita']
-        return locations[self.radio_variable.get()]
     
     def log_transaction(self):
         """Log the transaction into the database"""
-        # Returns -1 if no database connection
-        #trans_number = self.get_transaction_number()
-        # ----- #
-        #trans_number = -1
-        #self.transaction_number = trans_number
-        market_val = False
-        if self.radio_variable.get() !=0: # Make sure adding a regular value
-            market_val = tkMessageBox.askokcancel("Adding a Market Value", "Adding a market value! If not cancel and change check box at bottom of screen")
-            if market_val is False:
-                tkMessageBox.showinfo("Canceled add", "Canceled the transaction, disregard the next pop up")
-                return -1
-    
+
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
         #timestamp = timeformat.get_timestamp_string()
         cashier = self.cashierVar.get()
         time_to_finish = int(time.time() - self.start_time)
-        location = self.get_market_location()
-        if market_val == True:
-            got_date = False
-            while got_date != True:
-                time_string = tkSimpleDialog.askstring("Select Date for entry", "Enter date in form MM/DD/YYYY")
-                date_nums = time_string.split("/")
-                if len(date_nums) != 3:
-                    tkMessageBox.showwarning("Incorrect Date Format", "You have entered the date incorrectly")
-                elif int(date_nums[0]) > 12 or int(date_nums[1]) > 31:
-                    tkMessageBox.showwarning("Invalid Date", "You have entered an invalid date")
-                else:
-                    got_date = True
-            timestamp = datetime.datetime(int(date_nums[2]), int(date_nums[0]), int(date_nums[1]))
-        else:
-            timestamp = str(datetime.datetime.now())
-        insert_values = (total, sub, ed_tax, non_ed_tax, timestamp, cashier, time_to_finish, location)
+        #location = self.get_market_location()
+        
+        timestamp = str(datetime.datetime.now())
+        insert_values = (total, sub, ed_tax, non_ed_tax, timestamp, cashier, time_to_finish)
         print insert_values
         print "Logging transaction"
-        sql = "INSERT INTO " + TRANSACTION_TOTAL_TABLE + " VALUES (NULL,%f,%f,%f,%f,'%s','%s',%i,'%s');" % insert_values
+        sql = "INSERT INTO " + TRANSACTION_TOTAL_TABLE + " VALUES (NULL,%f,%f,%f,%f,'%s','%s',%i,'westmont');" % insert_values
         self.products_db_cursor.execute(sql)
         trans_number = self.products_db_connect.insert_id()
         
@@ -741,8 +707,8 @@ class Register:
         self.values_dict = ReadSettings.get_values_from_init_file(init_file)
         print self.values_dict
         # Radio variable for 
-        self.radio_variable = Tkinter.IntVar()
-        self.radio_variable.set(0) # Set to grove initially
+        #self.radio_variable = Tkinter.IntVar()
+        #self.radio_variable.set(0) # Set to grove initially
         self.scale = scale
         self.master = master
         self.cashierVar = Tkinter.StringVar()

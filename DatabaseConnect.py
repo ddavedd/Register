@@ -8,7 +8,7 @@ def connect(values_dict):
         try:
             db_user = "root"
             db_user_pw = "dave"
-            db_name = "sncg"
+            db_name = "thefarm"
             db_host = values_dict["database_path"]
             products_db_connect = MySQLdb.connect(db_host, db_user, db_user_pw, db_name)
             

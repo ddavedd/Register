@@ -1,5 +1,5 @@
-edible_tax_rate,.00
-nonedible_tax_rate,.06
+edible_tax_rate,.0175
+nonedible_tax_rate,.0725
 database_format,mysql
 database_path,127.0.0.1
 admin_button_height,4
@@ -34,7 +34,7 @@ totals_frame_color,blue
 payment_type_frame_color,darkblue
 cash_button_width,7
 cash_button_height,7
-register_name,SNCG_1
+register_name,COMPUTER_NAME
 product_font_size,16
 payment_button_width,10
 payment_button_height,4

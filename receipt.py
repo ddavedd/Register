@@ -47,14 +47,14 @@ def receipt_cart(cart, receipt_info):
 
 def receipt_info_header():
     """Information to add to the top of the receipt"""
-    #text = "The Farm\n34 E 63rd St\nwww.thefarmwestmont.com\n(630)960-3965\n\n"
-    text = "South Naples Citrus Grove\n341 Sabal Palm Road, Naples, FL 34114\nnaplescitrus.com\n(239) 774-3838\n\n"
+    text = "The Farm\n34 E 63rd St\nwww.thefarmwestmont.com\n(630)960-3965\n\n"
+    #text = "South Naples Citrus Grove\n341 Sabal Palm Road, Naples, FL 34114\nnaplescitrus.com\n(239) 774-3838\n\n"
     return text
 
 def receipt_info_footer():
     """Information to add to the bottom of the receipt"""
     #text = "Thank you for choosing The Farm"
-    text = ""
+    text = "\n"
     return text
 
 def receipt_time_transaction(receipt_info):

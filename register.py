@@ -17,8 +17,8 @@ import DatabaseConnect
 import MySQLdb
 import datetime
 CART_RIGHT = False       
-TRANSACTION_TOTAL_TABLE = "register_transactiontotal"
-TRANSACTION_ITEM_TABLE = "register_transactionitem"
+TRANSACTION_TOTAL_TABLE = "farm_register_transactiontotal"
+TRANSACTION_ITEM_TABLE = "farm_register_transactionitem"
 
 
 def add_frame(master, f_width, f_height, background_color, row, column):
@@ -90,7 +90,7 @@ class Register:
     def update_info_from_database(self):
         """Update the products, categories, items, and product_categories"""
         # original_table_names = ["items", "products", "categories", "product_categories", "product_price", "deal", "deal_price"]
-        django_table_names = ["register_item","register_product","register_category", "register_productcategory","register_productprice", "register_deal", "register_dealprice"]
+        django_table_names = ["farm_register_item","farm_register_product","farm_register_category", "farm_register_productcategory","farm_register_productprice", "farm_register_deal", "farm_register_dealprice"]
         ITEM, PROD, CAT, PROD_CAT, PROD_PRICE, DEAL = range(6)
         
         tables_used = django_table_names

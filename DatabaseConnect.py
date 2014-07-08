@@ -1,5 +1,6 @@
 import sqlite3
 import MySQLdb
+from subprocess import check_output, call
 
 def connect(values_dict):
     if values_dict["database_format"].strip() == "sqlite":
@@ -14,6 +15,9 @@ def connect(values_dict):
             
         except MySQLdb.DatabaseError as e:
             print "Failed to connect to mysql database, Database Error, check path"
+            print "Possible hosts"
+            nmap_out = check_output(["nmap","-sP","10.1.10.1/24"])
+            print call(["grep","-o", "10.1.10.*", nmap_out]) 
             print e
             return None, None
         except sqlite3.DatabaseError as e:

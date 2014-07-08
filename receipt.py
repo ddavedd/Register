@@ -35,8 +35,8 @@ def receipt_cart(cart, receipt_info):
             else:
                 text += "%i %s x $%.2f = $%.2f\n" % (entry.get_amount(), entry.get_description(), entry.price_per, entry.price())
         else:
-            # Otherwise it is a DealCartEntry 
-            text += "%i %s = $%.2f\n" % (entry.get_amount(), entry.get_description(), entry.price()) 
+            # Otherwise it is a DealCartEntry (3 Spaces) 
+            text += "   DISCOUNT %i x %.2f = $%.2f\n" % (entry.get_amount(), entry.price_per, entry.price()) 
 
     text += "\n"
     text += "Subtotal: %.2f\n" % (receipt_info.subtotal)

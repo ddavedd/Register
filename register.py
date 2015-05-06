@@ -33,7 +33,8 @@ def add_frame(master, f_width, f_height, background_color, row, column):
 def clear_frame(frame):
     """Clear a frame"""
     for widget in frame.grid_slaves():
-        widget.grid_forget()
+        # Changed from grid_forget() to grid_remove() because forget doesn't delete
+        widget.grid_remove()
 
 
 class Register:

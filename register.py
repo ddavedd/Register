@@ -16,6 +16,8 @@ import ReadSettings
 import DatabaseConnect
 import MySQLdb
 import datetime
+import sys
+#from __future__ import print_function
 CART_RIGHT = False       
 TRANSACTION_TOTAL_TABLE = "farm_register_transactiontotal"
 TRANSACTION_ITEM_TABLE = "farm_register_transactionitem"
@@ -35,6 +37,7 @@ def clear_frame(frame):
     for widget in frame.grid_slaves():
         # Changed from grid_forget() to grid_remove() because forget doesn't delete
         widget.grid_remove()
+        widget.destroy()
 
 
 class Register:
@@ -198,6 +201,9 @@ class Register:
                     product_button.config(text=button_text, width=self.products_button_width, height=self.products_button_height)
                     product_button.config(font=self.product_font, wraplength=130)
                     product_button.config(command=partial(self.add_to_cart, product))
+                    # -- Trying to keep track of destroyed buttons
+                    #product_button.bind("<Destroy>", lambda x: sys.stdout.write("Destroyed product button widget " + str(x)))
+                    # -- 
                     try:
                         product_button.config(background=product.color)
                     except:

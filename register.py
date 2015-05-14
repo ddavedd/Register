@@ -277,7 +277,7 @@ class Register:
         """Add a product entry into cart"""
         if len(self.cart) == 0:
             self.start_time = time.time()
-        
+                
         product_price = self.get_product_price(product.id)
         print "Added a %s" % product.name
         print "Price: %.2f" % product_price
@@ -295,14 +295,19 @@ class Register:
                 self.cart.append(cart_entry)
         else:
             # """Product not by weight"""
+            if self._shift_is_pressed:
+               amount = tkSimpleDialog.askinteger("Adding how many?", "Amount:")
+            else:
+               amount = 1
+               
             found = False
             for cart_index in range(len(self.cart)):
                 if isinstance(self.cart[cart_index], CartEntry.ProductCartEntry):
                     if self.cart[cart_index].product.id == product.id:
                         found = True
-                        self.cart[cart_index].add_one()
+                        self.cart[cart_index].add_some(amount)
             if not found: 
-                cart_entry = CartEntry.ProductCartEntry(product, product_price, 1)
+                cart_entry = CartEntry.ProductCartEntry(product, product_price, amount)
                 self.cart.append(cart_entry)
                 #if self.is_shift_pressed():
                 #    self.change_cart_amount(len(self.cart) - 1)
@@ -703,6 +708,16 @@ class Register:
         self.payment_font = tkFont.Font(size=self.payment_font_size, weight=tkFont.BOLD)
         self.cart_item_font = tkFont.Font(size=self.cart_item_font_size, weight=tkFont.BOLD)
         self.total_font = tkFont.Font(size=self.cart_total_font_size, weight=tkFont.BOLD)
+
+    def _shift_pressed(self, event):
+        self._shift_is_pressed = True
+        # Debug print 
+        print "Shift press"
+
+    def _shift_released(self, event):
+        self._shift_is_pressed = False
+        # Debug print
+        print "Shift release" 
         
     def __init__(self, master, init_file_name, scale):
         """Initiate all variables for the register program"""
@@ -776,9 +791,10 @@ class Register:
         self.master_frame.grid()
 
         #Removed functionality, possibly read later but not unless necessary
-        #self._shift_is_pressed = False
-        #self.master_frame.bind_all("<Shift_L>", self._shift_pressed)
-        #self.master_frame.bind_all("<KeyRelease-Shift_L>", self._shift_unpressed)
+        self._shift_is_pressed = False
+        self.master_frame.bind_all("<Shift_L>", self._shift_pressed)
+        self.master_frame.bind_all("<KeyRelease-Shift_L>", self._shift_released)
+        
                 
         assert application_height == information_height + categories_height + items_height + debug_height
         assert application_height == cart_info_height + cart_items_height + totals_height + payment_type_height

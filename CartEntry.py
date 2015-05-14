@@ -30,9 +30,9 @@ class CartEntry:
         """Change the amount of products in this entry to a new amount"""
         self.amount = new_amount
 
-    def add_one(self):
-        """Add one product to this cart entry"""
-        self.amount += 1
+    def add_some(self, more):
+        """Add more product to this cart entry"""
+        self.amount += more
 
     def __del__(self):
         """Called when this is deleted and cleaned up"""

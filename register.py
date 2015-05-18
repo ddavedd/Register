@@ -297,6 +297,9 @@ class Register:
             # """Product not by weight"""
             if self._shift_is_pressed:
                amount = tkSimpleDialog.askinteger("Adding how many?", "Amount:")
+               if amount is None:
+                  print "Tried to add nothing, returning"
+                  return
             else:
                amount = 1
                

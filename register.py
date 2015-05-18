@@ -750,8 +750,19 @@ class Register:
         # Early exit if can't connect to database
         if cursor is None:
             tkMessageBox.showwarning("Database Error", "Could not connect to database, check errors on terminal")
-            master.destroy()
-            return 
+            new_ip_address = tkSimpleDialog.askstring("Manual ip address entry", "Enter ip address of host to connect to (127.0.0.1 if can't connect to network)")
+            
+            if new_ip_address is not None:
+               self.values_dict["database_path"] = new_ip_address 
+               cursor, conn = DatabaseConnect.connect(self.values_dict)
+               print "Tried connecting to manual ip address " + new_ip_address
+               if cursor is None:
+                  tkMessageBox.showwarning("Manual ip entry failure", "Failed to connect to manual ip address, closing")
+                  master.destroy()
+                  return
+            else:
+               master.destroy()
+               return
         
         self.products_db_cursor = cursor
         self.products_db_connect = conn

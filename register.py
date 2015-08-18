@@ -17,6 +17,9 @@ import DatabaseConnect
 import MySQLdb
 import datetime
 import sys
+import read_category_order
+
+
 #from __future__ import print_function
 CART_RIGHT = False       
 TRANSACTION_TOTAL_TABLE = "farm_register_transactiontotal"
@@ -175,44 +178,82 @@ class Register:
             if category == self.current_category_id:
                 product_ids.append(product_category[0])
         
-        product_index = 0
+        
+        ordered_product_row = 0
+        ordered_product_col = 0
         print product_ids
         
-        for product in self.products:
-            if product.id in product_ids:
-                if product.enabled:
-                    product_button = Tkinter.Button(self.items_frame)
-                    product_price = self.get_product_price(product.id)
-                    # How the product is displayed in the product frame
-                    if product.is_premarked:
-                        button_text = "%s\n\nPremarked" % (product.name)
+        enabled_products = [p for p in self.products if p.id in product_ids and p.enabled]
+        print enabled_products
+        
+        #for product in self.products:
+        #    if product.id in product_ids:
+        #        if product.enabled:
+        if self.current_category_id in self.category_order_dict:
+            current_category_order = self.category_order_dict[self.current_category_id]
+        else:
+            current_category_order = []
+        for row in current_category_order:
+            ordered_product_col = 0
+            for product_id in row:
+                if product_id == -1: 
+                    # Skipping a column for special code
+                    ordered_product_col += 1
+                else:
+                    # get product from enabled products if it is in there, otherwise skip
+                    enabled_product = [p for p in enabled_products if p.id == product_id]
+                    if len(enabled_product) > 0:
+                        enabled_product = enabled_product[0]
+                        # remove the product so you don't add it at the end as well    
+                        enabled_products = [p for p in enabled_products if p.id != product_id]    
+                        # now add button
+                        product_button = self.create_product_button(enabled_product)
+                        product_button.grid(row=ordered_product_row, column=ordered_product_col)
+                        ordered_product_col += 1
                     else:
-                        button_text = "%s\n\n$%.2f" % (product.name, product_price)
-                    if product.is_by_weight:
-                        button_text += "/lb"
-                    
-                    print "Product" + str(product)
-                    deal = self.find_most_recent_deal(product.id)
-                    # What to show if there is a deal
-                    #if deal is not None:
-                    #    deal_price = deal.deal_price
-                    #    button_text += "\n%i / $%.2f" % (deal.product_count, deal_price)
+                        print "Couldn't find id %i in enabled ids for category %i" % (product_id, self.current_category_id)
                         
-                    product_button.config(text=button_text, width=self.products_button_width, height=self.products_button_height)
-                    product_button.config(font=self.product_font, wraplength=130)
-                    product_button.config(command=partial(self.add_to_cart, product))
-                    # -- Trying to keep track of destroyed buttons
-                    #product_button.bind("<Destroy>", lambda x: sys.stdout.write("Destroyed product button widget " + str(x)))
-                    # -- 
-                    try:
-                        product_button.config(background=product.color)
-                    except:
-                        tkMessageBox.showerror("Color not allowed", "The color %s for product %s is not allowed, check spelling" % (product.color, product.name))
-                    prod_row = product_index / self.products_column_width
-                    prod_col = product_index % self.products_column_width
-                    product_button.grid(row=prod_row, column=prod_col)
-                    product_index += 1
+            ordered_product_row += 1
+            
+        product_index = 0
+        for product in enabled_products:
+           
+           product_button = self.create_product_button(product)
+           prod_row = (product_index / self.products_column_width) + ordered_product_row
+           prod_col = product_index % self.products_column_width
+           product_button.grid(row=prod_row, column=prod_col)
+           product_index += 1
 
+    def create_product_button(self, product):
+        product_button = Tkinter.Button(self.items_frame)
+        product_price = self.get_product_price(product.id)
+       # How the product is displayed in the product frame
+        if product.is_premarked:
+            button_text = "%s\n\nPremarked" % (product.name)
+        else:
+            button_text = "%s\n\n$%.2f" % (product.name, product_price)
+        if product.is_by_weight:
+            button_text += "/lb"
+       
+        #print "Product" + str(product)
+        deal = self.find_most_recent_deal(product.id)
+        # What to show if there is a deal
+        #if deal is not None:
+        #    deal_price = deal.deal_price
+        #    button_text += "\n%i / $%.2f" % (deal.product_count, deal_price)
+            
+        product_button.config(text=button_text, width=self.products_button_width, height=self.products_button_height)
+        product_button.config(font=self.product_font, wraplength=130)
+        product_button.config(command=partial(self.add_to_cart, product))
+        # -- Trying to keep track of destroyed buttons
+        #product_button.bind("<Destroy>", lambda x: sys.stdout.write("Destroyed product button widget " + str(x)))
+        # -- 
+        try:
+            product_button.config(background=product.color)
+        except:
+            tkMessageBox.showerror("Color not allowed", "The color %s for product %s is not allowed, check spelling" % (product.color, product.name))
+        return product_button
+        
     def get_product_deal(self, product_id):
         """Get a deal for the product"""
         for deal in self.deals:
@@ -767,6 +808,10 @@ class Register:
                master.destroy()
                return
         
+        # read product ordering in category preferences
+        
+        self.category_order_dict = read_category_order.read_category_order()
+
         self.products_db_cursor = cursor
         self.products_db_connect = conn
          

@@ -1,2 +1,2 @@
-cd /home/farmer8/Register
+cd /home/farmer4/Register
 python register.py

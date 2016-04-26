@@ -3,7 +3,7 @@ import serial
 import ScaleError
 
 BYTES_TO_READ = 40
-MAX_TRIES = 5
+MAX_TRIES = 10
 
 class ABScale(object):
     """An Avery Berkel Scale to be used with POS system"""
@@ -26,26 +26,32 @@ class ABScale(object):
             return True
         else:
             return False
+    
+    # Fixed but needs to be added to the rest of the programs        
+    def get_weight(self):
+         """Get the current weight on the scale in pounds"""
+         try_number = 1
+         while (try_number < MAX_TRIES):
+            # Clear all previous data
+            #print self.ser.in_waiting
+            self.ser.flushInput()
+            self.ser.flushOutput()
             
-    def get_weight(self, try_number=1):
-        """Get the current weight on the scale in pounds"""
-        weight_code = "W" + chr(0x0D)
-        self.ser.write(weight_code)
-        bytes_read = self.ser.read(BYTES_TO_READ)
-        if len(bytes_read) == 0:
-            raise ScaleError.ScaleError("Scale Timed Out")
-        else:
-            print bytes_read
-            clean_bytes = bytes_read.strip()
-            pound_code = clean_bytes.split()
-            poundage = pound_code[0][:6]
-            print poundage
-        try:
-            return float(poundage)
-        except ValueError:
-            print "Error reading scale"
-            if try_number < MAX_TRIES:
-                print "Try number %i, retrying" % try_number
-                return self.get_weight(try_number+1)
+            weight_code = "W" + chr(0x0D)
+            self.ser.write(weight_code)
+            bytes_read = self.ser.read(BYTES_TO_READ)
+            if len(bytes_read) == 0:
+               raise ScaleError.ScaleError("Scale Timed Out")
             else:
-                raise ScaleError.ScaleError("Unable to read scale")
+               #print bytes_read
+               clean_bytes = bytes_read.strip()
+               pound_code = clean_bytes.split()
+               poundage = pound_code[0][:6]
+               print poundage
+            try:
+               return float(poundage)
+            except ValueError:
+               print "Error reading value, retrying" 
+               try_number += 1
+         # If it never reads a valid value, return a scale error  
+         raise ScaleError.ScaleError("Unable to read scale")

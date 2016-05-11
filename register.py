@@ -76,7 +76,7 @@ class Register:
     def simple_unlock(self):
         """Unlock everything"""
         self.enable_everything()
-        self.update_info_from_database()
+        #self.update_info_from_database()
         self.update_category_frame()
         self.update_products_frame()
         
@@ -96,6 +96,7 @@ class Register:
 
     def update_info_from_database(self):
         """Update the products, categories, items, and product_categories"""
+        print "Updating info from database\n"
         # original_table_names = ["items", "products", "categories", "product_categories", "product_price", "deal", "deal_price"]
         django_table_names = ["farm_register_item","farm_register_product","farm_register_category", "farm_register_productcategory","farm_register_productprice", "farm_register_deal", "farm_register_dealprice"]
         ITEM, PROD, CAT, PROD_CAT, PROD_PRICE, DEAL = range(6)
@@ -287,14 +288,15 @@ class Register:
             return
         else:
             self.current_category_id = category_id
-            if self.update_info_from_database() == False:
-                self.update_category_frame()
+            # Changing categories was calling database everytime, slowing things way down
+            #if self.update_info_from_database() == False:
+            #    self.update_category_frame()
             self.update_products_frame()
 
     def clear_cart(self):
         """Remove all items from cart"""
         self.cart = []
-        self.update_cart()    
+        self.update_cart()
 
     def get_weight(self):
         """Get weight from scale or if not connected from dialog"""
@@ -385,11 +387,22 @@ class Register:
     def update_cart_items(self):
         """Update the items in the cart, taking into account deals"""
         clear_frame(self.cart_items_frame)
-        text_headers = ["Product", "Amount", "Price", "Delete"]
+        # --- EXPERIMENTAL
+        clear_frame(self.secondary_cart_items_frame)
+        # --- END EXP
+        text_headers = ["Product","", "Amount", "Unit price","Price", "Delete"]
         for text_headers, text_index in zip(text_headers, range(len(text_headers))):
             header_label = Tkinter.Label(self.cart_items_frame)
             header_label.config(text=text_headers, width=12, justify=Tkinter.LEFT)
             header_label.grid(row=0, column=text_index)
+            
+            # --- EXPERIMENTAL
+            
+            sec_header_label = Tkinter.Label(self.secondary_cart_items_frame)
+            sec_header_label.config(text=text_headers, width=12, justify=Tkinter.LEFT)
+            sec_header_label.grid(row=0, column = text_index)
+            
+            # --- END EXPERIMENTAL
                 
         new_cart = []
         for cart_item in self.cart:
@@ -409,6 +422,10 @@ class Register:
         for cart_item in self.cart:
             #End deal check
             self.add_cart_item_labels(self.cart_items_frame, cart_item, cart_row)
+            
+            # EXPERIMENTAL 
+            self.add_cart_item_labels(self.secondary_cart_items_frame, cart_item, cart_row)
+            # END EXP
             cart_row += 1
 
     def add_cart_item_labels(self, frame, cart_item, cart_row):
@@ -416,64 +433,93 @@ class Register:
         
         self.cart_item_labels_width = 10
         name_label = Tkinter.Label(frame, anchor=Tkinter.W)
-        name_label.config(text=cart_item.get_description(), width=self.cart_item_labels_width, font=self.cart_item_font)
-        name_label.grid(row=cart_row + 1, column=0)
+        # Doubled the cart item label width
+        name_label.config(text=cart_item.get_description(), font=self.cart_item_font)
+        name_label.grid(row=cart_row + 1, column=0, columnspan=2)
         
         
         
         if isinstance(cart_item, CartEntry.ProductCartEntry):
-            amount_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
+            amount_button = Tkinter.Button(frame, anchor=Tkinter.CENTER)
+            unit_price_label = Tkinter.Label(frame, anchor=Tkinter.W)
+            # config unit price label
             if cart_item.product.is_by_weight or cart_item.product.is_premarked:
                 amount_button.config(text="%.2f" % cart_item.get_amount())
+                if cart_item.product.is_by_weight:
+                    unit_price_label.config(text="%.2f / lb" % cart_item.price_per)
+                else:
+                    unit_price_label.config(text="Premarked")
             else:
                 amount_button.config(text="%i" % cart_item.get_amount())
+                unit_price_label.config(text="%.2f each" % cart_item.price_per)
+                
             amount_button.config(command=partial(self.change_cart_amount, cart_row), font=self.cart_item_font)
-            amount_button.grid(row=cart_row + 1, column=1)
+            amount_button.grid(row=cart_row + 1, column=2)
+            unit_price_label.config(font=self.cart_item_font)
+            unit_price_label.grid(row=cart_row + 1, column=3)
+            
         else:
-            amount_label = Tkinter.Label(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
+            amount_label = Tkinter.Label(frame, anchor=Tkinter.CENTER, )
             amount_label.config(text="%i" % cart_item.get_amount(), font=self.cart_item_font)
-            amount_label.grid(row=cart_row + 1, column=1)
+            amount_label.grid(row=cart_row + 1, column=2)
+            
+            unit_price_label = Tkinter.Label(frame, anchor=Tkinter.W, )
+            unit_price_label.config(text="%.2f" % cart_item.deal.deal_price)
+            unit_price_label.config(font=self.cart_item_font)
+            unit_price_label.grid(row=cart_row + 1, column=3)
         
-        price_label = Tkinter.Label(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
+        price_label = Tkinter.Label(frame, anchor=Tkinter.W, )
         price_label.config(text="%.2f" % cart_item.price(), font=self.cart_item_font)
-        price_label.grid(row=cart_row + 1, column=2)
+        price_label.grid(row=cart_row + 1, column=4)
         
         if isinstance(cart_item, CartEntry.ProductCartEntry):
-            delete_button = Tkinter.Button(frame, anchor=Tkinter.W, width=self.cart_item_labels_width)
+            delete_button = Tkinter.Button(frame, anchor=Tkinter.W, )
             delete_button.config(text="X", font=self.cart_item_font)
             delete_button.config(command=partial(self.delete_item, cart_row))
-            delete_button.grid(row=cart_row + 1, column=3)
+            delete_button.grid(row=cart_row + 1, column=5)
 
     def update_cart_totals(self):
         """Update the totals of all items in the cart"""
         clear_frame(self.totals_frame)
-        totals_font = tkFont.Font(family="Arial", size=12)
+        clear_frame(self.secondary_totals_frame)
         
+        totals_font = tkFont.Font(family="Tahoma", size=20)
+        totals_font_bold = tkFont.Font(family="Tahoma", size=20, weight='bold')
         
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
        
-        total_label = Tkinter.Label(self.totals_frame, text="Total", anchor=Tkinter.W, font=self.total_font, background="white")
-        total_label.grid(row=0, column=0)
-        
-        total_value = Tkinter.Label(self.totals_frame, text="%.2f" % total, anchor=Tkinter.E, font=self.total_font)
-        total_value.grid(row=0, column=1)
-        subtotal_label = Tkinter.Label(self.totals_frame, text="Subtotal", anchor=Tkinter.W, width=15, font=totals_font)
-        subtotal_label.grid(row=2, column=0)
+        for frame in [self.totals_frame, self.secondary_totals_frame]:
+            #total_label = Tkinter.Label(frame, text="Total", anchor=Tkinter.W, font=totals_font)
+            #total_label.grid(row=5, column=0)
+            
+            #total_value = Tkinter.Label(frame, text="%.2f" % total, anchor=Tkinter.E, font=totals_font)
+            #total_value.grid(row=5, column=1)
+            
+            total_label = Tkinter.Label(frame, text="Total", anchor=Tkinter.W, width=15, font=totals_font_bold)
+            total_label.config(background="white")
+            total_label.grid(row=0, column=0)
+            
+            total_value = Tkinter.Label(frame, text="%.2f" % total, anchor=Tkinter.E, width=15, font=totals_font_bold)
+            total_value.config(background="white")
+            total_value.grid(row=0, column=1)
+            
+            subtotal_label = Tkinter.Label(frame, text="Subtotal", anchor=Tkinter.W, width=15, font=totals_font)
+            subtotal_label.grid(row=1, column=0)
 
-        subtotal_value = Tkinter.Label(self.totals_frame, text="%.2f" % sub, anchor=Tkinter.E, width=15, font=totals_font)
-        subtotal_value.grid(row=2, column=1)
-        
-        ed_tax_label = Tkinter.Label(self.totals_frame, text="Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
-        ed_tax_label.grid(row=3, column=0)
-        
-        ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
-        ed_tax_value.grid(row=3, column=1)
-        
-        non_ed_tax_label = Tkinter.Label(self.totals_frame, text="Non Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
-        non_ed_tax_label.grid(row=4, column=0)
-        
-        non_ed_tax_value = Tkinter.Label(self.totals_frame, text="%.2f" % non_ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
-        non_ed_tax_value.grid(row=4, column=1)
+            subtotal_value = Tkinter.Label(frame, text="%.2f" % sub, anchor=Tkinter.E, width=15, font=totals_font)
+            subtotal_value.grid(row=1, column=1)
+            
+            ed_tax_label = Tkinter.Label(frame, text="Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
+            ed_tax_label.grid(row=2, column=0)
+            
+            ed_tax_value = Tkinter.Label(frame, text="%.2f" % ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
+            ed_tax_value.grid(row=2, column=1)
+            
+            non_ed_tax_label = Tkinter.Label(frame, text="Non Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
+            non_ed_tax_label.grid(row=3, column=0)
+            
+            non_ed_tax_value = Tkinter.Label(frame, text="%.2f" % non_ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
+            non_ed_tax_value.grid(row=3, column=1)
         
        
 
@@ -498,6 +544,16 @@ class Register:
         column = 0
         self.cart_frames += 1
         return add_frame(self.cart_frame, self.cart_width, f_height, b_color, row, column)    
+    
+    # --- EXP
+    def add_secondary_cart_frame(self, f_height, b_color):
+        """Add the secondary cart frame to the secondary window"""
+        row = self.secondary_cart_frames
+        column = 0
+        self.secondary_cart_frames += 1
+        print "Adding to secondary cart frame row %i column %i, height %i" % (row, column, f_height)
+        return add_frame(self.secondary_cart, self.cart_width, f_height, b_color, row, column)
+    # --- EXP
     
     def update_debug_frame(self):
         """Adds options for changing what the transactions go into"""
@@ -682,7 +738,7 @@ class Register:
         
     def get_subtotal_price(self):
         """Determine the price of all items in the cart"""
-        return sum(cart_item.price() for cart_item in self.cart)
+        return 0.0 + sum(cart_item.price() for cart_item in self.cart)
 
     def get_total_price(self):
         """Get the sub total plus all applicable taxes"""
@@ -842,18 +898,27 @@ class Register:
         self.receipt_chars_per_inch = int(self.values_dict["receipt_chars_per_inch"])
         print self.receipt_chars_per_inch
         
-        
+        self.master.resizable(False,False)
         
         self.products_frames = 0
         self.cart_frames = 0
         self.master_frame = Tkinter.Frame(master)
+       
         self.master_frame.grid()
-
+        
+        # EXP ---
+        self.secondary_cart = Tkinter.Toplevel(master)
+        self.secondary_cart.resizable(False,False)
+        self.secondary_cart.protocol("WM_DELETE_WINDOW", self.secondary_cart.iconify)
+        self.secondary_cart.grid()
+        self.secondary_cart_frames = 0
+        # EXP ---
+        
         #Removed functionality, possibly read later but not unless necessary
         self._shift_is_pressed = False
         self.master_frame.bind_all("<Shift_L>", self._shift_pressed)
         self.master_frame.bind_all("<KeyRelease-Shift_L>", self._shift_released)
-        
+                
                 
         assert application_height == information_height + categories_height + items_height + debug_height
         assert application_height == cart_info_height + cart_items_height + totals_height + payment_type_height
@@ -878,6 +943,12 @@ class Register:
         self.cart_info_frame = self.add_cart_frame(cart_info_height, self.values_dict["cart_info_frame_color"])
         self.cart_items_frame = self.add_cart_frame(cart_items_height, self.values_dict["cart_items_frame_color"])
         self.totals_frame = self.add_cart_frame(totals_height, self.values_dict["totals_frame_color"])
+        
+        # EXP ---
+        # Secondary cart additions
+        self.secondary_cart_items_frame = self.add_secondary_cart_frame(cart_items_height, "gray")
+        self.secondary_totals_frame = self.add_secondary_cart_frame(totals_height, "gray")
+        # EXP ---
         
         #self.update_admin_frame()
         self.update_category_frame()

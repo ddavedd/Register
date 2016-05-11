@@ -55,7 +55,9 @@ class ProductCartEntry(CartEntry):
 
     def get_description(self):
         """Get the description of the cart entry"""
-        return self.product.name
+        # Remove the extra whitespace
+        print self.product.name
+        return ' '.join(self.product.name.split())
     
 class DealCartEntry(CartEntry):
     """An entry of a deal into the cart"""
@@ -76,4 +78,4 @@ class DealCartEntry(CartEntry):
     def get_description(self):
         """Get the description of the deal"""
         return "%i %s / $%.2f" % (self.deal.product_count, self.product.name,
-                                self.price_per) 
+                                self.deal.deal_price) 

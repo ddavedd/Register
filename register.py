@@ -431,8 +431,8 @@ class Register:
     def add_cart_item_labels(self, frame, cart_item, cart_row):
         """Add labels to all items in the cart"""
         
-        self.cart_item_labels_width = 10
-        name_label = Tkinter.Label(frame, anchor=Tkinter.W)
+        self.cart_item_labels_width = 18
+        name_label = Tkinter.Label(frame, width=self.cart_item_labels_width, anchor=Tkinter.W, justify=Tkinter.LEFT, bg=self.values_dict["cart_items_frame_color"])
         # Doubled the cart item label width
         name_label.config(text=cart_item.get_description(), font=self.cart_item_font)
         name_label.grid(row=cart_row + 1, column=0, columnspan=2)
@@ -441,7 +441,7 @@ class Register:
         
         if isinstance(cart_item, CartEntry.ProductCartEntry):
             amount_button = Tkinter.Button(frame, anchor=Tkinter.CENTER)
-            unit_price_label = Tkinter.Label(frame, anchor=Tkinter.W)
+            unit_price_label = Tkinter.Label(frame, anchor=Tkinter.W, bg=self.values_dict["cart_items_frame_color"])
             # config unit price label
             if cart_item.product.is_by_weight or cart_item.product.is_premarked:
                 amount_button.config(text="%.2f" % cart_item.get_amount())
@@ -459,16 +459,16 @@ class Register:
             unit_price_label.grid(row=cart_row + 1, column=3)
             
         else:
-            amount_label = Tkinter.Label(frame, anchor=Tkinter.CENTER, )
+            amount_label = Tkinter.Label(frame, anchor=Tkinter.CENTER, bg=self.values_dict["cart_items_frame_color"])
             amount_label.config(text="%i" % cart_item.get_amount(), font=self.cart_item_font)
             amount_label.grid(row=cart_row + 1, column=2)
             
-            unit_price_label = Tkinter.Label(frame, anchor=Tkinter.W, )
+            unit_price_label = Tkinter.Label(frame, anchor=Tkinter.W, bg=self.values_dict["cart_items_frame_color"])
             unit_price_label.config(text="%.2f" % cart_item.deal.deal_price)
             unit_price_label.config(font=self.cart_item_font)
             unit_price_label.grid(row=cart_row + 1, column=3)
         
-        price_label = Tkinter.Label(frame, anchor=Tkinter.W, )
+        price_label = Tkinter.Label(frame, anchor=Tkinter.W, bg=self.values_dict["cart_items_frame_color"])
         price_label.config(text="%.2f" % cart_item.price(), font=self.cart_item_font)
         price_label.grid(row=cart_row + 1, column=4)
         
@@ -908,6 +908,7 @@ class Register:
         
         # EXP ---
         self.secondary_cart = Tkinter.Toplevel(master)
+        self.secondary_cart.title("Customer Cart View")
         self.secondary_cart.resizable(False,False)
         self.secondary_cart.protocol("WM_DELETE_WINDOW", self.secondary_cart.iconify)
         self.secondary_cart.grid()
@@ -946,7 +947,7 @@ class Register:
         
         # EXP ---
         # Secondary cart additions
-        self.secondary_cart_items_frame = self.add_secondary_cart_frame(cart_items_height, "gray")
+        self.secondary_cart_items_frame = self.add_secondary_cart_frame(cart_items_height, self.values_dict["cart_items_frame_color"])
         self.secondary_totals_frame = self.add_secondary_cart_frame(totals_height, "gray")
         # EXP ---
         

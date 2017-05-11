@@ -1,5 +1,5 @@
 edible_tax_rate,.0175
-nonedible_tax_rate,.0725
+nonedible_tax_rate,.075
 database_format,mysql
 database_path,127.0.0.1
 admin_button_height,4
@@ -11,9 +11,9 @@ application_width,1900
 products_width,1300
 cart_width,600
 information_height,0
-categories_height,160
+categories_height,200
 items_height,800
-debug_height,40
+debug_height,0
 cart_info_height,0
 cart_items_height,750
 totals_height,150
@@ -24,18 +24,18 @@ categories_button_width,8
 categories_button_height,4
 category_font_size,12
 receipt_chars_per_inch,15
-information_frame_color,darkblue
-categories_frame_color,powderblue
-items_frame_color,purple
+information_frame_color,deepskyblue
+categories_frame_color,lawngreen
+items_frame_color,gray21
 debug_frame_color,black
-cart_info_frame_color,darkblue
+cart_info_frame_color,deepskyblue
 cart_items_frame_color,powderblue
-totals_frame_color,blue
-payment_type_frame_color,darkblue
+totals_frame_color,deepskyblue
+payment_type_frame_color,deepskyblue
 cash_button_width,7
 cash_button_height,7
 register_name,farmer4
-product_font_size,16
+product_font_size,14
 payment_button_width,10
 payment_button_height,4
 payment_font_size, 12

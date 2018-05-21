@@ -24,7 +24,7 @@ import read_category_order
 CART_RIGHT = False       
 TRANSACTION_TOTAL_TABLE = "farm_register_transactiontotal"
 TRANSACTION_ITEM_TABLE = "farm_register_transactionitem"
-
+EMPLOYEE_DISCOUNT_RATE = .75
 
 def add_frame(master, f_width, f_height, background_color, row, column):
     """Add a frame to the master with various attributes"""
@@ -388,7 +388,7 @@ class Register:
         """Update the items in the cart, taking into account deals"""
         clear_frame(self.cart_items_frame)
         # --- EXPERIMENTAL
-        clear_frame(self.secondary_cart_items_frame)
+        # clear_frame(self.secondary_cart_items_frame)
         # --- END EXP
         text_headers = ["Product","", "Amount", "Unit price","Price", "Delete"]
         for text_headers, text_index in zip(text_headers, range(len(text_headers))):
@@ -398,9 +398,9 @@ class Register:
             
             # --- EXPERIMENTAL
             
-            sec_header_label = Tkinter.Label(self.secondary_cart_items_frame)
-            sec_header_label.config(text=text_headers, width=12, justify=Tkinter.LEFT)
-            sec_header_label.grid(row=0, column = text_index)
+            # sec_header_label = Tkinter.Label(self.secondary_cart_items_frame)
+            # sec_header_label.config(text=text_headers, width=12, justify=Tkinter.LEFT)
+            # sec_header_label.grid(row=0, column = text_index)
             
             # --- END EXPERIMENTAL
                 
@@ -424,7 +424,7 @@ class Register:
             self.add_cart_item_labels(self.cart_items_frame, cart_item, cart_row)
             
             # EXPERIMENTAL 
-            self.add_cart_item_labels(self.secondary_cart_items_frame, cart_item, cart_row)
+            # self.add_cart_item_labels(self.secondary_cart_items_frame, cart_item, cart_row)
             # END EXP
             cart_row += 1
 
@@ -481,20 +481,22 @@ class Register:
     def update_cart_totals(self):
         """Update the totals of all items in the cart"""
         clear_frame(self.totals_frame)
-        clear_frame(self.secondary_totals_frame)
+        #clear_frame(self.secondary_totals_frame)
         
         totals_font = tkFont.Font(family="Tahoma", size=20)
         totals_font_bold = tkFont.Font(family="Tahoma", size=20, weight='bold')
         
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
        
-        for frame in [self.totals_frame, self.secondary_totals_frame]:
+        for frame in [self.totals_frame, ]: #self.secondary_totals_frame]:
             #total_label = Tkinter.Label(frame, text="Total", anchor=Tkinter.W, font=totals_font)
             #total_label.grid(row=5, column=0)
             
             #total_value = Tkinter.Label(frame, text="%.2f" % total, anchor=Tkinter.E, font=totals_font)
             #total_value.grid(row=5, column=1)
-            
+
+
+
             total_label = Tkinter.Label(frame, text="Total", anchor=Tkinter.W, width=15, font=totals_font_bold)
             total_label.config(background="white")
             total_label.grid(row=0, column=0)
@@ -521,7 +523,10 @@ class Register:
             non_ed_tax_value = Tkinter.Label(frame, text="%.2f" % non_ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
             non_ed_tax_value.grid(row=3, column=1)
         
-       
+            employee_discount_button = Tkinter.Button(frame, text="Employee Discount", command=self.employee_discount, width=15, height=1)
+            employee_discount_button.config(font=totals_font_bold)
+            employee_discount_button.grid(row=4, column=0)
+
 
     def receipt_print(self, trans_number):
         """Send the receipt to the printer"""        
@@ -586,9 +591,17 @@ class Register:
         check_button.grid(row=0, column=2)
     
         no_sale_button = Tkinter.Button(self.payment_type_frame, text="No Sale", command=self.no_sale, width=self.payment_button_width, height=self.payment_button_height)
-        no_sale_button.config(font=payment_font)
+        no_sale_button.config(font=payment_font) 
         no_sale_button.grid(row=0, column=3)
         
+
+
+    def employee_discount(self):
+        """Not yet implemented"""
+        self.employee_discount_enabled = not self.employee_discount_enabled
+        self.update_cart()
+  
+
     def no_sale(self):
         receipt.print_no_sale()
         
@@ -699,10 +712,10 @@ class Register:
         trans_number = self.log_transaction()
         if trans_number != -1:
             self.receipt_print(trans_number)
-    
+        self.employee_discount_enabled = False    
+
     def log_transaction(self):
         """Log the transaction into the database"""
-
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
         #timestamp = timeformat.get_timestamp_string()
         cashier = self.cashierVar.get()
@@ -738,7 +751,11 @@ class Register:
         
     def get_subtotal_price(self):
         """Determine the price of all items in the cart"""
-        return 0.0 + sum(cart_item.price() for cart_item in self.cart)
+        subtotal =  0.0 + sum(cart_item.price() for cart_item in self.cart)
+        if self.employee_discount_enabled:
+            return EMPLOYEE_DISCOUNT_RATE * subtotal 
+        else:
+            return subtotal
 
     def get_total_price(self):
         """Get the sub total plus all applicable taxes"""
@@ -825,7 +842,7 @@ class Register:
             init_file = open(init_file_name)
         except IOError:
             print "Couldn't find initiation file for configuring register"
-        
+        self.employee_discount_enabled = False
         self.values_dict = ReadSettings.get_values_from_init_file(init_file)
         print self.values_dict
         # Radio variable for 
@@ -907,12 +924,12 @@ class Register:
         self.master_frame.grid()
         
         # EXP ---
-        self.secondary_cart = Tkinter.Toplevel(master)
-        self.secondary_cart.title("Customer Cart View")
-        self.secondary_cart.resizable(False,False)
-        self.secondary_cart.protocol("WM_DELETE_WINDOW", self.secondary_cart.iconify)
-        self.secondary_cart.grid()
-        self.secondary_cart_frames = 0
+        #self.secondary_cart = Tkinter.Toplevel(master)
+        #self.secondary_cart.title("Customer Cart View")
+        #self.secondary_cart.resizable(False,False)
+        #self.secondary_cart.protocol("WM_DELETE_WINDOW", self.secondary_cart.iconify)
+        #self.secondary_cart.grid()
+        #self.secondary_cart_frames = 0
         # EXP ---
         
         #Removed functionality, possibly read later but not unless necessary
@@ -947,8 +964,8 @@ class Register:
         
         # EXP ---
         # Secondary cart additions
-        self.secondary_cart_items_frame = self.add_secondary_cart_frame(cart_items_height, self.values_dict["cart_items_frame_color"])
-        self.secondary_totals_frame = self.add_secondary_cart_frame(totals_height, "gray")
+        # self.secondary_cart_items_frame = self.add_secondary_cart_frame(cart_items_height, self.values_dict["cart_items_frame_color"])
+        # self.secondary_totals_frame = self.add_secondary_cart_frame(totals_height, "gray")
         # EXP ---
         
         #self.update_admin_frame()

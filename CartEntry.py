@@ -56,7 +56,7 @@ class ProductCartEntry(CartEntry):
     def get_description(self):
         """Get the description of the cart entry"""
         # Remove the extra whitespace
-        print self.product.name
+        #print self.product.name
         return ' '.join(self.product.name.split())
     
 class DealCartEntry(CartEntry):

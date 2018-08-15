@@ -156,7 +156,7 @@ class Register:
                 old_deals == self.deals, \
                 ]
                 # If everything is the same, then return True, otherwise it isn't the same, return False
-            print compare_lists
+            #print compare_lists
             if reduce(lambda x,y: x and y, compare_lists):   
                 return True
             else:
@@ -182,10 +182,10 @@ class Register:
         
         ordered_product_row = 0
         ordered_product_col = 0
-        print product_ids
+        #print product_ids
         
         enabled_products = [p for p in self.products if p.id in product_ids and p.enabled]
-        print enabled_products
+        #print enabled_products
         
         #for product in self.products:
         #    if product.id in product_ids:
@@ -211,8 +211,8 @@ class Register:
                         product_button = self.create_product_button(enabled_product)
                         product_button.grid(row=ordered_product_row, column=ordered_product_col)
                         ordered_product_col += 1
-                    else:
-                        print "Couldn't find id %i in enabled ids for category %i" % (product_id, self.current_category_id)
+                    #else:
+                        #print "Couldn't find id %i in enabled ids for category %i" % (product_id, self.current_category_id)
                         
             ordered_product_row += 1
             
@@ -364,6 +364,7 @@ class Register:
     def delete_item(self, cart_row):
         """Delete an item from cart"""
         self.cart.pop(cart_row)
+        print "Deleted an item " + str(datetime.datetime.now())
         self.update_cart()
     
     def update_cart(self):
@@ -377,7 +378,7 @@ class Register:
             return None
         else:
             # Return most recent deal if it is enabled
-            print product_deals[0]
+            #print product_deals[0]
             most_recent_deal = max(product_deals, key=lambda x: x.timestamp)
             if most_recent_deal.enabled:
                 return most_recent_deal
@@ -603,6 +604,7 @@ class Register:
   
 
     def no_sale(self):
+        print "NO SALE PRESSED " + str(datetime.datetime.now())
         receipt.print_no_sale()
         
     def cash_pay(self):
@@ -675,6 +677,7 @@ class Register:
             self.finish_transaction()
             self.display_change_amount(total, cash_amount)
             self.clear_cart()
+            print "CASH SALE PRESSED " + str(datetime.datetime.now())
         finally:
             self.unlock_window(window_to_close)
             
@@ -692,6 +695,7 @@ class Register:
             tkMessageBox.showinfo("Credit Card Payment", "Total: $%.2f" % (total))
             self.simple_unlock()
             self.clear_cart()
+            print "CREDIT SALE PRESSED " + str(datetime.datetime.now())
         else:
             tkMessageBox.showwarning("Total is zero", "Total is zero, did you mean No Sale?")
             
@@ -704,6 +708,7 @@ class Register:
             tkMessageBox.showinfo("Check Payment", "Total: $%.2f" % (total))
             self.simple_unlock()
             self.clear_cart()
+            print "CHECK SALE PRESSED " + str(datetime.datetime.now())
         else:
             tkMessageBox.showwarning("Total is zero", "Total is zero, did you mean No Sale?")
             

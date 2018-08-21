@@ -34,9 +34,9 @@ class CartEntry:
         """Add more product to this cart entry"""
         self.amount += more
 
-    def __del__(self):
-        """Called when this is deleted and cleaned up"""
-        print "Deleting a cart entry"
+    #def __del__(self):
+    #    """Called when this is deleted and cleaned up"""
+    #    #print "Deleting a cart entry"
 
 class ProductCartEntry(CartEntry):
     """An entry of a product into the cart"""

@@ -3,7 +3,7 @@ import serial
 import ScaleError
 
 BYTES_TO_READ = 40
-MAX_TRIES = 10
+MAX_TRIES = 6
 
 class ABScale(object):
     """An Avery Berkel Scale to be used with POS system"""
@@ -31,6 +31,7 @@ class ABScale(object):
     def get_weight(self):
          """Get the current weight on the scale in pounds"""
          try_number = 1
+         weights_recorded = []
          while (try_number < MAX_TRIES):
             # Clear all previous data
             #print self.ser.in_waiting
@@ -46,12 +47,23 @@ class ABScale(object):
                #print bytes_read
                clean_bytes = bytes_read.strip()
                pound_code = clean_bytes.split()
+               #print pound_code
                poundage = pound_code[0][:6]
-               print poundage
-            try:
-               return float(poundage)
-            except ValueError:
-               print "Error reading value, retrying" 
-               try_number += 1
-         # If it never reads a valid value, return a scale error  
-         raise ScaleError.ScaleError("Unable to read scale")
+               #print poundage
+               weights_recorded.append(poundage)
+               try_number = try_number + 1
+         print weights_recorded
+         clean_weights = [float(w) for w in weights_recorded if not (w[0] == "S" or w[0] == "?")]
+         if sum([1 for w in weights_recorded if (w[0] == "S" or w[0] == "?")]) >= 2:
+            print "Need to retry weight"
+            raise ScaleError.ScaleError("Retry Scale")
+         elif max(clean_weights) - min(clean_weights) > 0.015:
+            print "Inconsistent weights"
+            print clean_weights
+            print max(clean_weights) - min(clean_weights)
+            raise ScaleError.ScaleError("Inconsistent Weights")
+         else:
+            print "Average reading"
+            average = sum(clean_weights)/float(len(clean_weights))
+            print average
+            return average

@@ -44,6 +44,7 @@ def clear_frame(frame):
 
 
 class Register:
+    diagnostic_mode = False
     """The basic component of our register, should be MVC'd if possible"""
     def disable_everything(self):
         """Disable everything so that you have to finish what you are currently doing"""
@@ -183,8 +184,12 @@ class Register:
         ordered_product_row = 0
         ordered_product_col = 0
         #print product_ids
+        if self.diagnostic_mode: 
+            # Get all products even if disabled
+            enabled_products = [p for p in self.products if p.id in product_ids]
+        else:
+            enabled_products = [p for p in self.products if p.id in product_ids and p.enabled]
         
-        enabled_products = [p for p in self.products if p.id in product_ids and p.enabled]
         #print enabled_products
         
         #for product in self.products:
@@ -230,9 +235,15 @@ class Register:
         product_price = self.get_product_price(product.id)
        # How the product is displayed in the product frame
         if product.is_premarked:
-            button_text = "%s\n\nPremarked" % (product.name)
+            if self.diagnostic_mode:
+                button_text = "P_id=%i\n%s\nPremarked" %(product.id, product.name)
+            else:
+                button_text = "%s\n\nPremarked" % (product.name)
         else:
-            button_text = "%s\n\n$%.2f" % (product.name, product_price)
+            if self.diagnostic_mode:
+                button_text = "P_id=%i\n%s\n$%.2f" % (product.id, product.name, product_price)
+            else:
+                button_text = "%s\n\n$%.2f" % (product.name, product_price)
         if product.is_by_weight:
             button_text += "/lb"
        
@@ -604,8 +615,12 @@ class Register:
   
 
     def no_sale(self):
-        print "NO SALE PRESSED " + str(datetime.datetime.now())
-        receipt.print_no_sale()
+        if self._shift_is_pressed:
+            tkMessageBox.showwarning("Diagnostic Mode", "Entering Diagnostic Mode")
+            self.diagnostic_mode = True
+        else:
+            print "NO SALE PRESSED " + str(datetime.datetime.now())
+            receipt.print_no_sale()
         
     def cash_pay(self):
         """Called when payed with cash"""

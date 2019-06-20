@@ -242,6 +242,9 @@ class Register:
         else:
             if self.diagnostic_mode:
                 button_text = "P_id=%i\n%s\n$%.2f" % (product.id, product.name, product_price)
+                current_deal = self.find_most_recent_deal(product.id)
+                if current_deal is not None:
+                    button_text += "\nDeal: %i / %.2f" % (current_deal.product_count, current_deal.deal_price)
             else:
                 button_text = "%s\n\n$%.2f" % (product.name, product_price)
         if product.is_by_weight:
@@ -316,8 +319,9 @@ class Register:
         else:
             try:
                 weight = self.scale.get_weight()
-            except ScaleError.ScaleError:
+            except ScaleError.ScaleError as e:
                 print "Error reading scale, enter weight manually"
+                print e
                 weight = tkSimpleDialog.askfloat("Weight Entry", "Weight (lbs):")
         return weight
 
@@ -618,6 +622,9 @@ class Register:
         if self._shift_is_pressed:
             tkMessageBox.showwarning("Diagnostic Mode", "Entering Diagnostic Mode")
             self.diagnostic_mode = True
+        elif self._ctrl_is_pressed:
+            tkMessageBox.showwarning("Receipt Read Mode", "Entering Receipt Read Mode")
+            self.receipt_mode = True
         else:
             print "NO SALE PRESSED " + str(datetime.datetime.now())
             receipt.print_no_sale()
@@ -855,6 +862,14 @@ class Register:
         self._shift_is_pressed = False
         # Debug print
         print "Shift release" 
+    
+    def _ctrl_pressed(self, event):
+        self._ctrl_is_pressed = True
+        print "Ctrl Pressed"
+        
+    def _ctrl_released(self, event):
+        self._ctrl_is_pressed = False
+        print "Ctrl Released"
         
     def __init__(self, master, init_file_name, scale):
         """Initiate all variables for the register program"""
@@ -954,9 +969,11 @@ class Register:
         
         #Removed functionality, possibly read later but not unless necessary
         self._shift_is_pressed = False
+        self._ctrl_is_pressed = False
         self.master_frame.bind_all("<Shift_L>", self._shift_pressed)
         self.master_frame.bind_all("<KeyRelease-Shift_L>", self._shift_released)
-                
+        self.master_frame.bind_all("<Control_L>", self._ctrl_pressed)
+        self.master_frame.bind_all("<KeyRelease-Control_L>", self._ctrl_released)        
                 
         assert application_height == information_height + categories_height + items_height + debug_height
         assert application_height == cart_info_height + cart_items_height + totals_height + payment_type_height

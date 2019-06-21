@@ -1,6 +1,7 @@
 """A scale to read weight only"""
 import serial
 import ScaleError
+import time
 
 BYTES_TO_READ = 40
 MAX_TRIES = 6
@@ -40,6 +41,7 @@ class ABScale(object):
             
             weight_code = "W" + chr(0x0D)
             self.ser.write(weight_code)
+            time.sleep(.05)
             bytes_read = self.ser.read(BYTES_TO_READ)
             if len(bytes_read) == 0:
                raise ScaleError.ScaleError("Scale Timed Out")

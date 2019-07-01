@@ -736,12 +736,12 @@ class Register:
             
     def finish_transaction(self, transaction_type):
         """Logs the transaction and prints receipt, clears cart for next transaction"""
-        trans_number = self.log_transaction()
+        trans_number = self.log_transaction(transaction_type)
         if trans_number != -1:
             self.receipt_print(trans_number, transaction_type)
         self.employee_discount_enabled = False    
 
-    def log_transaction(self):
+    def log_transaction(self, transaction_type):
         """Log the transaction into the database"""
         total, sub, ed_tax, non_ed_tax = self.get_total_price()
         #timestamp = timeformat.get_timestamp_string()
@@ -750,10 +750,10 @@ class Register:
         #location = self.get_market_location()
         
         timestamp = str(datetime.datetime.now())
-        insert_values = (total, sub, ed_tax, non_ed_tax, timestamp, cashier, time_to_finish)
+        insert_values = (total, sub, ed_tax, non_ed_tax, timestamp, cashier, time_to_finish, transaction_type)
         print insert_values
         print "Logging transaction"
-        sql = "INSERT INTO " + TRANSACTION_TOTAL_TABLE + " VALUES (NULL,%f,%f,%f,%f,'%s','%s',%i,'westmont');" % insert_values
+        sql = "INSERT INTO " + TRANSACTION_TOTAL_TABLE + " VALUES (NULL,%f,%f,%f,%f,'%s','%s',%i,'westmont','%s');" % insert_values
         self.products_db_cursor.execute(sql)
         trans_number = self.products_db_connect.insert_id()
         

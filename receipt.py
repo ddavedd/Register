@@ -5,7 +5,7 @@ import CartEntry
 
 class ReceiptInfo(object):
     """A struct with all the necessary info for the receipt"""
-    def __init__(self, transaction_number, total, subtotal, tax_edible, tax_non_edible, tax_rate_edible, tax_rate_nonedible):
+    def __init__(self, transaction_number, total, subtotal, tax_edible, tax_non_edible, tax_rate_edible, tax_rate_nonedible, transaction_type):
         self.transaction_number = transaction_number
         self.total = total
         self.subtotal = subtotal
@@ -13,6 +13,7 @@ class ReceiptInfo(object):
         self.tax_non_edible = tax_non_edible
         self.tax_rate_edible = tax_rate_edible
         self.tax_rate_non_edible = tax_rate_nonedible
+        self.transaction_type = transaction_type
 
 def generate_receipt_text(cart, receipt_info):
     """Generate the text to print for customer receipt"""
@@ -42,7 +43,8 @@ def receipt_cart(cart, receipt_info):
     text += "Subtotal: %.2f\n" % (receipt_info.subtotal)
     text += "Tax Edible (%.2f%%): $%.2f\n" % (receipt_info.tax_rate_edible * 100, receipt_info.tax_edible)
     text += "Tax Non Edible (%.2f%%): $%.2f\n" % (receipt_info.tax_rate_non_edible * 100, receipt_info.tax_non_edible)
-    text += "Total: $%.2f\n" % (receipt_info.total)	
+    text += "Total: $%.2f\n" % (receipt_info.total)
+    text += "Payment Type: %s" % (receipt_info.transaction_type)
     return text
 
 def receipt_info_header():

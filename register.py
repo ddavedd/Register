@@ -544,12 +544,12 @@ class Register:
             employee_discount_button.grid(row=4, column=0)
 
 
-    def receipt_print(self, trans_number):
+    def receipt_print(self, trans_number, transaction_type):
         """Send the receipt to the printer"""        
         total, subtotal, tax_edible, tax_non_edible = self.get_total_price()
         receipt_info = receipt.ReceiptInfo(trans_number, 
                 total, subtotal, tax_edible, tax_non_edible, 
-                self.edible_tax_rate, self.nonedible_tax_rate)
+                self.edible_tax_rate, self.nonedible_tax_rate, transaction_type)
         receipt.print_receipt(self.cart, receipt_info, self.receipt_chars_per_inch)
         
     def add_products_frame(self, f_height, b_color):
@@ -696,7 +696,7 @@ class Register:
         else:
             total, _, _, _ = self.get_total_price()
             window_to_close.destroy()
-            self.finish_transaction()
+            self.finish_transaction("CASH")
             self.display_change_amount(total, cash_amount)
             self.clear_cart()
             print "CASH SALE PRESSED " + str(datetime.datetime.now())
@@ -712,7 +712,7 @@ class Register:
         """Called when payment is credit card"""
         total, _, _, _ = self.get_total_price()
         if total > 0.00:
-            self.finish_transaction()
+            self.finish_transaction("CREDIT CARD")
             self.simple_lock()
             tkMessageBox.showinfo("Credit Card Payment", "Total: $%.2f" % (total))
             self.simple_unlock()
@@ -725,7 +725,7 @@ class Register:
         """Called when payment is check"""    
         total, _, _, _ = self.get_total_price()
         if total > 0.00:
-            self.finish_transaction()
+            self.finish_transaction("CHECK")
             self.simple_lock()
             tkMessageBox.showinfo("Check Payment", "Total: $%.2f" % (total))
             self.simple_unlock()
@@ -734,11 +734,11 @@ class Register:
         else:
             tkMessageBox.showwarning("Total is zero", "Total is zero, did you mean No Sale?")
             
-    def finish_transaction(self):
+    def finish_transaction(self, transaction_type):
         """Logs the transaction and prints receipt, clears cart for next transaction"""
         trans_number = self.log_transaction()
         if trans_number != -1:
-            self.receipt_print(trans_number)
+            self.receipt_print(trans_number, transaction_type)
         self.employee_discount_enabled = False    
 
     def log_transaction(self):

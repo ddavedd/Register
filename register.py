@@ -280,8 +280,8 @@ class Register:
         """Updates the categories in the category frame"""        
         clear_frame(self.category_frame)
         category_index = 0
-
-        for category in self.categories:
+        print str(self.categories[0])
+        for category in [c for c in self.categories if c.enabled]:
             cat_button = Tkinter.Button(self.category_frame, wraplength=80)
             try:
                 cat_button.config(background=category.color)

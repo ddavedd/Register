@@ -81,10 +81,11 @@ class Product:
 class Category:
     """A category that products are lumped in to"""
     def __init__(self, db_row):
-        category_id, category_name, category_color = range(3)
+        category_id, category_name, category_color, enabled = range(4)
         self.id = db_row[category_id]
         self.name = db_row[category_name]
         self.color = str(db_row[category_color])
+        self.enabled = bool(db_row[enabled])
         
     def __eq__(self, other):
         #print "Checking if two categories equal"

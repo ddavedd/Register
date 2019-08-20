@@ -286,7 +286,7 @@ class Register:
             try:
                 cat_button.config(background=category.color)
             except:
-                    tkMessageBox.showerror("Color not allowed", "The color %s for category %s is not allowed, check spelling" % (category.color, category.name))
+                tkMessageBox.showerror("Color not allowed", "The color %s for category %s is not allowed, check spelling" % (category.color, category.name))
             cat_button.config(text=category.name, height=self.categories_button_height, width=self.categories_button_width)
             cat_button.config(command=partial(self.change_category, category.id))
             cat_button.config(font=self.category_font)
@@ -513,33 +513,33 @@ class Register:
 
 
 
-            total_label = Tkinter.Label(frame, text="Total", anchor=Tkinter.W, width=15, font=totals_font_bold)
+            total_label = Tkinter.Label(frame, text="Total", anchor=Tkinter.W, width=self.values_dict["cart_totals_width"], font=totals_font_bold)
             total_label.config(background="white")
             total_label.grid(row=0, column=0)
             
-            total_value = Tkinter.Label(frame, text="%.2f" % total, anchor=Tkinter.E, width=15, font=totals_font_bold)
+            total_value = Tkinter.Label(frame, text="%.2f" % total, anchor=Tkinter.E, width=self.values_dict["cart_totals_width"], font=totals_font_bold)
             total_value.config(background="white")
             total_value.grid(row=0, column=1)
             
-            subtotal_label = Tkinter.Label(frame, text="Subtotal", anchor=Tkinter.W, width=15, font=totals_font)
+            subtotal_label = Tkinter.Label(frame, text="Subtotal", anchor=Tkinter.W, width=self.values_dict["cart_totals_width"], font=totals_font)
             subtotal_label.grid(row=1, column=0)
 
-            subtotal_value = Tkinter.Label(frame, text="%.2f" % sub, anchor=Tkinter.E, width=15, font=totals_font)
+            subtotal_value = Tkinter.Label(frame, text="%.2f" % sub, anchor=Tkinter.E, width=self.values_dict["cart_totals_width"], font=totals_font)
             subtotal_value.grid(row=1, column=1)
             
-            ed_tax_label = Tkinter.Label(frame, text="Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
+            ed_tax_label = Tkinter.Label(frame, text="Edible Tax", anchor=Tkinter.W, width=self.values_dict["cart_totals_width"], font=totals_font)
             ed_tax_label.grid(row=2, column=0)
             
-            ed_tax_value = Tkinter.Label(frame, text="%.2f" % ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
+            ed_tax_value = Tkinter.Label(frame, text="%.2f" % ed_tax, anchor=Tkinter.E, width=self.values_dict["cart_totals_width"], font=totals_font)
             ed_tax_value.grid(row=2, column=1)
             
-            non_ed_tax_label = Tkinter.Label(frame, text="Non Edible Tax", anchor=Tkinter.W, width=15, font=totals_font)
+            non_ed_tax_label = Tkinter.Label(frame, text="Non Edible Tax", anchor=Tkinter.W, width=self.values_dict["cart_totals_width"], font=totals_font)
             non_ed_tax_label.grid(row=3, column=0)
             
-            non_ed_tax_value = Tkinter.Label(frame, text="%.2f" % non_ed_tax, anchor=Tkinter.E, width=15, font=totals_font)
+            non_ed_tax_value = Tkinter.Label(frame, text="%.2f" % non_ed_tax, anchor=Tkinter.E, width=self.values_dict["cart_totals_width"], font=totals_font)
             non_ed_tax_value.grid(row=3, column=1)
         
-            employee_discount_button = Tkinter.Button(frame, text="Employee Discount", command=self.employee_discount, width=15, height=1)
+            employee_discount_button = Tkinter.Button(frame, text="Employee Discount", command=self.employee_discount, width=self.values_dict["cart_totals_width"], height=1)
             employee_discount_button.config(font=totals_font_bold)
             employee_discount_button.grid(row=4, column=0)
 

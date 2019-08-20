@@ -41,4 +41,5 @@ payment_button_height,4
 payment_font_size, 12
 cart_item_font_size, 12
 cart_total_font_size,25
+cart_totals_width,14
 

@@ -1,4 +1,4 @@
-import Tkinter
+import tkinter
 from functools import partial
 
 class NumberPadDialog:
@@ -7,15 +7,15 @@ class NumberPadDialog:
                      ["Clear", "Done"]]
         self.current_number_label = None
         
-        num_pad_window = Tkinter.Toplevel()
-        self.number_entry = Tkinter.Entry(num_pad_window)
+        num_pad_window = tkinter.Toplevel()
+        self.number_entry = tkinter.Entry(num_pad_window)
         self.number_entry.grid(row=0, column=0, columnspan=3)        
         
         row_number = 1
         for row in self.keys:
             column_number = 0
             for number in row:
-                button = Tkinter.Button(num_pad_window, text=str(number), \
+                button = tkinter.Button(num_pad_window, text=str(number), \
                                             command=partial(self._button_pushed, number))
                 button.config(width=6, height=4)
                 button.grid(row=row_number, column=column_number)
@@ -25,4 +25,4 @@ class NumberPadDialog:
         
     def _button_pushed(self, button_value):
         
-        print button_value
+        print(button_value)

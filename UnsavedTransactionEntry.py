@@ -16,13 +16,13 @@ try:
     init_file_name = "settings.txt"
     init_file = open(init_file_name)
 except:
-    print "Couldn't open settings.txt"
+    print("Couldn't open settings.txt")
     
 values_dict = ReadSettings.get_values_from_init_file(init_file)
 try:
     cursor, conn = DatabaseConnect.connect(values_dict)   
 except:
-    print "Error connecting to database"
+    print("Error connecting to database")
 # Insert into database
 for f in os.listdir("UnsavedTrans"):
     max_trans_num = get_max_transaction_number(cursor)
@@ -31,9 +31,9 @@ for f in os.listdir("UnsavedTrans"):
     transaction_statements = open_f.read()
     open_f.close()
     clean_statements = transaction_statements.replace("-1,", str(max_trans_num) + ",")
-    print clean_statements
+    print(clean_statements)
     for l in clean_statements.split("\n"):
         cursor.execute(l)
     conn.commit()
     os.remove(file_path)
-print "Finished."
+print("Finished.")

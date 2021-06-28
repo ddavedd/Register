@@ -14,21 +14,21 @@ def connect(values_dict):
             products_db_connect = MySQLdb.connect(db_host, db_user, db_user_pw, db_name)
             
         except MySQLdb.DatabaseError as e:
-            print "Failed to connect to mysql database, Database Error, check path"
+            print("Failed to connect to mysql database, Database Error, check path")
 
 #            nmap_out = check_output(["nmap","-sP","10.1.10.1/24"])
 #            print call(["grep","-o", "10.1.10.*", nmap_out]) 
-            print e
+            print(e)
             return None, None
         except sqlite3.DatabaseError as e:
-            print "Failed to connect to sqlite database"
-            print e
+            print("Failed to connect to sqlite database")
+            print(e)
             return None, None
         except:
-            print "General Database Error"
+            print("General Database Error")
             return None, None
     else:
-        print "Unknown Database format, unable to connect"
+        print("Unknown Database format, unable to connect")
         return None, None
     
     products_db_cursor = products_db_connect.cursor()

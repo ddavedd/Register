@@ -5,7 +5,7 @@ import timeformat
 class Deal:
     """A special for a multiple number of products"""
     def __init__(self, db_row):
-        deal_id, product_id, product_count, deal_price, timestamp, enabled = range(6)
+        deal_id, product_id, product_count, deal_price, timestamp, enabled = list(range(6))
         self.id = db_row[deal_id]
         self.product_id = db_row[product_id]
         self.product_count = db_row[product_count]
@@ -32,7 +32,7 @@ class Deal:
 class ProductPrice:
     """The price of a product"""
     def __init__(self, db_row):
-        product_price_id, product_id, price, timestamp = range(4)
+        product_price_id, product_id, price, timestamp = list(range(4))
         self.id = db_row[product_id]
         self.price = db_row[price]
         self.timestamp = db_row[timestamp]
@@ -44,7 +44,7 @@ class ProductPrice:
 class Item:
     """A basic item from the database"""
     def __init__(self, db_row):
-        item_id, item_name = range(2)
+        item_id, item_name = list(range(2))
         self.id = db_row[item_id]
         self.name = db_row[item_name]
 
@@ -55,7 +55,7 @@ class Item:
 class Product:
     """A product with a price, tax_rate, etc."""
     def __init__(self, db_row):
-        product_id, item_id, item_count, name, tax_rate, enabled, product_type, product_color = range(8)
+        product_id, item_id, item_count, name, tax_rate, enabled, product_type, product_color = list(range(8))
         self.id = db_row[product_id]
         self.item = db_row[item_id]
         self.item_count = db_row[item_count]
@@ -81,7 +81,7 @@ class Product:
 class Category:
     """A category that products are lumped in to"""
     def __init__(self, db_row):
-        category_id, category_name, category_color, enabled = range(4)
+        category_id, category_name, category_color, enabled = list(range(4))
         self.id = db_row[category_id]
         self.name = db_row[category_name]
         self.color = str(db_row[category_color])

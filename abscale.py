@@ -16,8 +16,8 @@ class ABScale(object):
             bytesize=serial.SEVENBITS, parity=serial.PARITY_EVEN,
             stopbits=serial.STOPBITS_ONE, timeout=.1)
         except serial.SerialException:
-            print "Scale not connected at %s" % device_address
-            print "Please restart program with scale connected"    
+            print("Scale not connected at %s" % device_address)
+            print("Please restart program with scale connected")    
             self.ser = None
             
     
@@ -54,18 +54,18 @@ class ABScale(object):
                #print poundage
                weights_recorded.append(poundage)
                try_number = try_number + 1
-         print weights_recorded
+         print(weights_recorded)
          clean_weights = [float(w) for w in weights_recorded if not (w[0] == "S" or w[0] == "?")]
          if sum([1 for w in weights_recorded if (w[0] == "S" or w[0] == "?")]) >= 2:
-            print "Need to retry weight"
+            print("Need to retry weight")
             raise ScaleError.ScaleError("Retry Scale")
          elif max(clean_weights) - min(clean_weights) > 0.015:
-            print "Inconsistent weights"
-            print clean_weights
-            print max(clean_weights) - min(clean_weights)
+            print("Inconsistent weights")
+            print(clean_weights)
+            print(max(clean_weights) - min(clean_weights))
             raise ScaleError.ScaleError("Inconsistent Weights")
          else:
-            print "Average reading"
+            print("Average reading")
             average = sum(clean_weights)/float(len(clean_weights))
-            print average
+            print(average)
             return average

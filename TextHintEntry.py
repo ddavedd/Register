@@ -1,7 +1,7 @@
-import Tkinter
+import tkinter
 from functools import partial
 
-class TextHintEntry(Tkinter.Entry):
+class TextHintEntry(tkinter.Entry):
 
     """An Entry that does an autocomplete search for a connected option box"""
      
@@ -24,15 +24,15 @@ class TextHintEntry(Tkinter.Entry):
         #self.number_times += 1
         self.matching_hints = []
         current_entry_text = self.get().lower()
-        print "Current text is '%s'" % current_entry_text
+        print("Current text is '%s'" % current_entry_text)
         for hint in self._hint_list:
-            print "Looking for text in '%s'" % hint        
+            print("Looking for text in '%s'" % hint)        
             if hint.lower().find(current_entry_text) >= 0:
                 self.matching_hints.append(hint)
         
-        print "Found %i matches" % len(self.matching_hints)
-        print self.matching_hints
-        self._option_box["menu"].delete(0, Tkinter.END)
+        print("Found %i matches" % len(self.matching_hints))
+        print(self.matching_hints)
+        self._option_box["menu"].delete(0, tkinter.END)
         current_index =  0
         for hint in self.matching_hints[:self._MAX_MATCHES]:
             self._option_box["menu"].add_command(label=hint, command=partial(self.menu_clicked, current_index))
@@ -53,16 +53,16 @@ class TextHintEntry(Tkinter.Entry):
     def handle_keyrelease(self, event):
         """Handle what happens when a key is pressed"""
         # Special events are only up and down
-        print "--In Keyrelease event handler--" + str(self.number_times)
+        print("--In Keyrelease event handler--" + str(self.number_times))
         self.number_times += 1
         if event.keysym == "Up":
             if len(self.matching_hints) > 0:
-                print "Special case up arrow"
+                print("Special case up arrow")
                 self.current_index = (self.current_index + 1) % len(self.matching_hints)
                 self.set_option_box_value()
         elif event.keysym == "Down":
             if len(self.matching_hints) > 0:
-                print "Special case down arrow"
+                print("Special case down arrow")
                 self.current_index = (self.current_index + 1) % len(self.matching_hints)
                 self.set_option_box_value()
         else:

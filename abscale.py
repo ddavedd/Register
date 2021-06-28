@@ -40,7 +40,7 @@ class ABScale(object):
             self.ser.flushOutput()
             
             weight_code = "W" + chr(0x0D)
-            self.ser.write(weight_code)
+            self.ser.write(weight_code.encode())
             time.sleep(.05)
             bytes_read = self.ser.read(BYTES_TO_READ)
             if len(bytes_read) == 0:
